@@ -1,4 +1,3 @@
-import axios from "axios";
 import { query } from "../config/db.js";
 
 const TCGDEX_URL = process.env.TCGDEX_API_URL;
@@ -7,7 +6,7 @@ export const syncSetsFromAPI = async () => {
   console.log("Intentando conectar a:", TCGDEX_URL);
   try {
     // Pedir los sets a la API
-    const response = await axios.get(`${TCGDEX_URL}/sets`);
+    const response = await fetch(`${TCGDEX_URL}/sets`);
     const sets = response.data;
 
     console.log(`Sincornizando ${sets.length} sets...`);
@@ -40,7 +39,7 @@ export const syncCardsBySet = async (setId) => {
     console.log(`Obteniendo cartas del set: ${setId}`);
 
     // Pedir los detalles del set
-    const response = await axios.get(`${TCGDEX_URL}/sets/${setId}`);
+    const response = await fetch(`${TCGDEX_URL}/sets/${setId}`);
     const setDetails = response.data;
 
     const cards = setDetails.cards || []; // Array de cartas
