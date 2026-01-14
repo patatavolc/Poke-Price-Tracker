@@ -1,4 +1,4 @@
-import { syncSetsFromAPI } from "../services/pokemon.service";
+import { syncSetsFromAPI } from "../services/pokemon.service.js";
 
 export const syncSets = async (req, res) => {
   try {

@@ -4,6 +4,7 @@ import { query } from "../config/db.js";
 const TCGDEX_URL = process.env.TCGDEX_API_URL;
 
 export const syncSetsFromAPI = async () => {
+  console.log("Intentando conectar a:", process.env.TCGDEX_API_URL);
   try {
     // Pedir los sets a la API
     const response = await axios.get(`${TCGDEX_URL}/sets`);
@@ -13,6 +14,8 @@ export const syncSetsFromAPI = async () => {
 
     // Guardar cada set en la DB
     for (const set of sets) {
+      const cardCountValue = set.cardCount?.total || 0;
+
       const queryText = `
         INSERT INTO sets (id, name, logo_url, card_count)
         VALUES ($1, $2, $3, $4)
@@ -22,7 +25,7 @@ export const syncSetsFromAPI = async () => {
       // TCGdex devuelve el logo sin .png (a veces) por lo que lo normalizo
       const logo = set.logo ? `${set.logo}.png` : null;
 
-      await query(queryText, [set.id, set.name, logo, set.cardCount]);
+      await query(queryText, [set.id, set.name, logo, cardCountValue]);
     }
 
     return { success: true, count: sets.length };

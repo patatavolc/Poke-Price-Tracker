@@ -1,8 +1,8 @@
 import express from "express";
-import { syncSets } from "../controllers/sync.controllerr";
+import { syncSets } from "../controllers/sync.controller.js";
 
 const router = express.Router();
 
-router.get("/sync-set", syncSets);
+router.get("/sets", syncSets);
 
 export default router;
