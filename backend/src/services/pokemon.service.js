@@ -4,7 +4,7 @@ import { query } from "../config/db.js";
 const TCGDEX_URL = process.env.TCGDEX_API_URL;
 
 export const syncSetsFromAPI = async () => {
-  console.log("Intentando conectar a:", process.env.TCGDEX_API_URL);
+  console.log("Intentando conectar a:", TCGDEX_URL);
   try {
     // Pedir los sets a la API
     const response = await axios.get(`${TCGDEX_URL}/sets`);
@@ -42,21 +42,24 @@ export const syncCardsBySet = async (setId) => {
     // Pedir los detalles del set
     const response = await axios.get(`${TCGDEX_URL}/sets/${setId}`);
     const setDetails = response.data;
-    const cards = setDetails.cards; // Array de cartas
+
+    const cards = setDetails.cards || []; // Array de cartas
 
     if (!cards || cards.length === 0) {
+      console.log(`El set ${setId} no devolvio cartas en el array .cards`);
       return { success: true, count: 0 };
     }
 
     // Insertar cartas en la DB
     for (const card of cards) {
       const queryText = `
-      INSERT INTO cards (id, name, image_url, local_id, set_id)
-      VALUES ($1, $2, $3, $4, $5)
-      ON CONFLICT (id) DO UPDATE
-      SET name = EXCLUDED.NAME
-        image_url = EXCLUDED.image_url,
-        local_id = EXCLUDED.local_id;
+        INSERT INTO cards (id, name, image_url, local_id, set_id)
+        VALUES ($1, $2, $3, $4, $5)
+        ON CONFLICT (id) DO UPDATE 
+        SET name = EXCLUDED.name, 
+            image_url = EXCLUDED.image_url, 
+            local_id = EXCLUDED.local_id,
+            updated_at = NOW();
       `;
 
       // Normalizar la url de la imagen
@@ -97,11 +100,9 @@ export const syncAllCards = async () => {
       try {
         const result = await syncCardsBySet(set.id);
         totalCardsSynced += result.count;
-        console.log(
-          `Set ${set.id} completado. Total acumulado: ${totalCardsSynced}`
-        );
+        console.log(`Progreso: ${totalCardsSynced} cartas en total`);
       } catch (error) {
-        console.error(`Fallo el set ${set.id}: ${err.message}`);
+        console.error(`Fallo en el set ${set.id}: ${error.message}`);
         // Seguir con el siguiente set aunque falle
         continue;
       }

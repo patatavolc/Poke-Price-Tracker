@@ -31,14 +31,13 @@ export const syncCards = async (req, res) => {
   }
 };
 
-export const syncAll = async (req, res) => {
-  try {
-    const result = await syncAllCards();
-    res.status(200).json({
-      message: "Sincronizacion masiva completada",
-      totalCards: result.total,
-    });
-  } catch (error) {
-    res.status(500).json({ error: "Error en la sincronizacion masiva" });
-  }
+export const syncAll = (req, res) => {
+  // Se quita el await para que no bloquee la respuesta HTTP
+  syncAllCards()
+    .then(result => console.log(`Proceso terminado: ${result.total} cartas.`))
+    .catch(error => console.error("Error en segundo plano:", error.message));
+
+  res.status(202).json({
+    message: "Sincronización masiva iniciada en segundo plano. Revisa la terminal para ver el progreso.",
+  });
 };
