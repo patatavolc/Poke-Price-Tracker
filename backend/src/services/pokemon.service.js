@@ -1,5 +1,6 @@
 import axios from "axios";
 import { query } from "../config/db.js";
+import { createRef } from "react";
 
 const TCGDEX_URL = process.env.TCGDEX_API_URL;
 
@@ -31,6 +32,53 @@ export const syncSetsFromAPI = async () => {
     return { success: true, count: sets.length };
   } catch (error) {
     console.error("Error en syncSetsFromAPI:", error.message);
+    throw error;
+  }
+};
+
+export const syncCardsBySet = async (setId) => {
+  try {
+    console.log(`Obteniendo cartas del set: ${setId}`);
+
+    // Pedir los detalles del set
+    const response = await axios.get(`${TCGDEX_URL}/sets/${setId}`);
+    const setDetails = response.data;
+    const cards = setDetails.cards; // Array de cartas
+
+    if (!cards || cards.length === 0) {
+      return { success: true, count: 0 };
+    }
+
+    // Insertar cartas en la DB
+    for (const card of cards) {
+      const queryText = `
+      INSERT INTO cards (id, name, image_url, local_id, set_id)
+      VALUES ($1, $2, $3, $4, $5)
+      ON CONFLICT (id) DO UPDATE
+      SET name = EXCLUDED.NAME
+        image_url = EXCLUDED.image_url,
+        local_id = EXCLUDED.local_id;
+      `;
+
+      // Normalizar la url de la imagen
+      const imageUrl = card.image ? `${card.image}/high.png` : null;
+
+      await query(queryText, [
+        card.id,
+        card.name,
+        imageUrl,
+        card.localId,
+        setId,
+      ]);
+    }
+
+    console.log(`${cards.length} cartas sincronizadas para el set ${setId}`);
+    return { success: true, count: cards.length };
+  } catch (error) {
+    console.error(
+      `Error sincronizando cartas del set ${setId}:`,
+      error.message
+    );
     throw error;
   }
 };
