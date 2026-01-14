@@ -1,6 +1,5 @@
 import axios from "axios";
 import { query } from "../config/db.js";
-import { createRef } from "react";
 
 const TCGDEX_URL = process.env.TCGDEX_API_URL;
 
@@ -79,6 +78,38 @@ export const syncCardsBySet = async (setId) => {
       `Error sincronizando cartas del set ${setId}:`,
       error.message
     );
+    throw error;
+  }
+};
+
+export const syncAllCards = async () => {
+  try {
+    // Obtener todos los IDs de sets que hay en la DB
+    const { rows: sets } = await query("SELECT id FROM sets");
+    console.log(
+      `Iniciando sincronizacion masiva de cartas para ${sets.length} sets...`
+    );
+
+    let totalCardsSynced = 0;
+
+    // Recorrer cada set y llamar a la logica de sincronizacion
+    for (const set of sets) {
+      try {
+        const result = await syncCardsBySet(set.id);
+        totalCardsSynced += result.count;
+        console.log(
+          `Set ${set.id} completado. Total acumulado: ${totalCardsSynced}`
+        );
+      } catch (error) {
+        console.error(`Fallo el set ${set.id}: ${err.message}`);
+        // Seguir con el siguiente set aunque falle
+        continue;
+      }
+    }
+
+    return { success: true, total: totalCardsSynced };
+  } catch (error) {
+    console.error("Error en syncAllCards:", error.message);
     throw error;
   }
 };
