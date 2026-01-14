@@ -1,6 +1,7 @@
 import {
   syncSetsFromAPI,
   syncCardsBySet,
+  syncAllCards,
 } from "../services/pokemon.service.js";
 
 export const syncSets = async (req, res) => {
@@ -27,5 +28,17 @@ export const syncCards = async (req, res) => {
     res
       .status(500)
       .json({ error: `Error al sincronizar cartas del set ${setId}` });
+  }
+};
+
+export const syncAll = async (req, res) => {
+  try {
+    const result = await syncAllCards();
+    res.status(200).json({
+      message: "Sincronizacion masiva completada",
+      totalCards: result.total,
+    });
+  } catch (error) {
+    res.status(500).json({ error: "Error en la sincronizacion masiva" });
   }
 };
