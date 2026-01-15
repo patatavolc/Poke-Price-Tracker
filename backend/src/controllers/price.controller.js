@@ -1,5 +1,5 @@
 import { syncPriceByCardId } from "../services/price.service.js";
-
+import { syncAggregatedPrice } from "../services/priceAggregator.service.js";
 
 export const updatePrice = async (req, res) => {
   const { cardId } = req.params;
@@ -23,3 +23,24 @@ export const updatePrice = async (req, res) => {
   }
 };
 
+export const updateAggregatedPrice = async (req, res) => {
+  const { cardId } = req.params;
+
+  try {
+    const priceData = await syncAggregatedPrice(cardId);
+
+    if (!priceData) {
+      return res
+        .status(404)
+        .json({ message: "No se encontraron precios disponibles" });
+    }
+
+    res.status(200).json({
+      message: "Precio agregado actualizado correctamente",
+      cardId,
+      ...priceData,
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};

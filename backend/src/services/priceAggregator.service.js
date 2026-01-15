@@ -79,3 +79,63 @@ async function getTCGPlayerPrice(cardName, localId) {
     console.error("Error obteniendo precio de TCGPlayer: ", error.message);
   }
 }
+
+// Obtiene precio de Cardmarket
+async function getCardmarketPrice(cardId) {
+  try {
+    // NOTA: Cardmarket requiere OAuth, esto es un placeholder
+    const response = await fetch(`${CARDMARKET_API_URL}/products/${cardId}`);
+    
+    if (!response.ok) return null;
+
+    const data = await response.json();
+    return data.priceGuide?.AVG || data.priceGuide?.TREND || null;
+  } catch (error) {
+    console.error("Error obteniendo precio Cardmarket:", error.message);
+    return null;
+  }
+}
+
+
+// Sincroniza precio agregado y lo guarda en el historial
+export const syncAggregatedPrice = async (cardId) => {
+  try {
+    const { rows } = await query(
+      "SELECT name, local_id FROM cards WHERE id = $1",
+      [cardId]
+    );
+
+    if (rows.length === 0) {
+      throw new Error("Carta no encontrada en la DB");
+    }
+
+    const { name, local_id } = rows[0];
+
+    const priceData = await getAggregatedPrice(cardId, name, local_id);
+
+    if (!priceData) {
+      console.log(`No se encontraron precios para ${name}`);
+      return null;
+    }
+
+    // Guardar cada fuente en el historial
+    for (const source of priceData.sources) {
+      await query(
+        "INSERT INTO price_history (card_id, price, source) VALUES ($1, $2, $3)",
+        [cardId, source.priceUsd, source.source]
+      );
+    }
+
+    // Guardar también el precio medio
+    await query(
+      "INSERT INTO price_history (card_id, price, source) VALUES ($1, $2, $3)",
+      [cardId, priceData.averagePriceUsd, "aggregated"]
+    );
+
+    console.log(`Precios actualizados para ${name}: €${priceData.averagePriceEur}`);
+    return priceData;
+  } catch (error) {
+    console.error(`Error sincronizando precio agregado:`, error.message);
+    throw error;
+  }
+};
