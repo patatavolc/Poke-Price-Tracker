@@ -77,6 +77,7 @@ async function getTCGPlayerPrice(cardName, localId) {
     return prices.holofoil?.market || prices.normal?.market || null;
   } catch (error) {
     console.error("Error obteniendo precio de TCGPlayer: ", error.message);
+    return null
   }
 }
 

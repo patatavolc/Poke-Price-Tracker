@@ -7,7 +7,7 @@ export const syncSetsFromAPI = async () => {
   try {
     // Pedir los sets a la API
     const response = await fetch(`${TCGDEX_URL}/sets`);
-    const sets = response.data;
+    const sets = await response.json();
 
     console.log(`Sincornizando ${sets.length} sets...`);
 
@@ -40,7 +40,7 @@ export const syncCardsBySet = async (setId) => {
 
     // Pedir los detalles del set
     const response = await fetch(`${TCGDEX_URL}/sets/${setId}`);
-    const setDetails = response.data;
+    const setDetails = await response.json();
 
     const cards = setDetails.cards || []; // Array de cartas
 

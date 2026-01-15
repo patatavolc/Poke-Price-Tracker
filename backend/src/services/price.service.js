@@ -20,7 +20,7 @@ export const updateCardPrice = async (cardId) => {
     const response = await fetch(
       `${POKEMON_TCG_API_URL}/cards?q=name:"${card.name}" number:${card.local_id}`,
       {
-        headers: { "X-Api-Key": process.env.POKEMON_TCG_API_URL },
+        headers: { "X-Api-Key": process.env.POKEMON_TCG_API_KEY },
       }
     );
 
@@ -56,7 +56,7 @@ export const syncPriceByCardId = async (cardId) => {
     // Consultar la API externa
     const response = await fetch(`${POKEMON_TCG_API_URL}/cards/${cardId}`, {
       headers: {
-        "X-Api-Key": process.env.POKEMON_TCG_API_KEY_URL || "",
+        "X-Api-Key": process.env.POKEMON_TCG_API_KEY|| "",
       },
     });
 
