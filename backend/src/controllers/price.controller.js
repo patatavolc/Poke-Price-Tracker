@@ -1,5 +1,6 @@
 import { syncPriceByCardId } from "../services/price.service.js";
 
+
 export const updatePrice = async (req, res) => {
   const { cardId } = req.params;
 
@@ -21,3 +22,4 @@ export const updatePrice = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
+

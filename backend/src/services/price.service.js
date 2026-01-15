@@ -1,5 +1,4 @@
 import { query } from "../config/db.js";
-import { getExchangeRate } from "./currency.service.js";
 
 const POKEMON_TCG_API_URL = process.env.POKEMON_TCG_API_URL;
 
@@ -90,56 +89,3 @@ export const syncPriceByCardId = async (cardId) => {
   }
 };
 
-export const getAgregatedPrice = async (cardId) => {
-  const usdToEurRate = 1 / (await getExchangeRate()); // Pasar de USD a EUR
-
-  // Fuentes para consultar los precios
-  const sources = [
-    {
-      name: "Cardmarket",
-      url: `https://api.cardmarket.com/v1/products/${cardId}`,
-      currency: "EUR",
-    },
-    {
-      name: "TCGPlayer",
-      url: `https://api.tcgplayer.com/v1/pricing/${cardId}`,
-      currency: "USD",
-    },
-  ];
-
-  // Consultas en paralelo
-  const pricePromises = sources.map(async (source) => {
-    try {
-      const res = await fetch(source.url);
-      if (!res.ok) return null;
-      const data = await res.json();
-
-      // Logica de extraccion de precio (Varia segun el JSON de la API)
-      let rawPrice = data.marketPrice || data.price || 0;
-
-      // Normalizar a euros
-      const priceInEur =
-        source.currency === "USD" ? rawPrice * usdToEurRate : rawPrice;
-
-      return priceInEur > 0 ? priceInEur : null;
-    } catch (error) {
-      return null;
-    }
-  });
-
-  const results = await Promise.all(pricePromises);
-  const validPrices = results.filter((p) => p !== null);
-
-  if (validPrices.length === 0) return null;
-
-  // Calcular la media en euros
-  const averageEur =
-    validPrices.reduce((a, b) => a + b, 0) / validPrices.length;
-
-  return {
-    priceEur: parseFloat(averageEur.toFixed(2)),
-    priceUsd: parseFloat((averageEur * (1 / usdToEurRate)).toFixed(2)),
-    sourceCount: validPrices.length,
-    updatedAt: new Date(),
-  };
-};

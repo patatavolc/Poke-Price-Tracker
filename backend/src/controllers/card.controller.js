@@ -12,6 +12,6 @@ export const getCardDetails = async (req, res) => {
 
     res.json(cardData);
   } catch (error) {
-    res.status(500).son({ error: error.message });
+    res.status(500).json({ error: error.message });
   }
 };

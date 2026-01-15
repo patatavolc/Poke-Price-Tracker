@@ -7,7 +7,7 @@ export const getCardByIdWithHistory = async (id) => {
 
   const cardRes = await query(cardQuery, [id]);
 
-  if (cardQuery.rows.length === 0) {
+  if (cardRes.rows.length === 0) {
     return null;
   }
 
