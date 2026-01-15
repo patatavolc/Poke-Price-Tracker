@@ -55,3 +55,27 @@ export const getAggregatedPrice = async (cardId, cardName, localId) => {
     throw error;
   }
 };
+
+// Obtiene precio de TCGPlayer
+async function getTCGPlayerPrice(cardName, localId) {
+  try {
+    const response = await fetch(
+      `${POKEMON_TCG_API_URL}/cards?q=name:"${cardName}" number:${localId}`,
+      {
+        headers: { "X-Api-Key": process.env.POKEMON_TCG_API_KEY || "" },
+      }
+    );
+
+    if (!response.ok) return null;
+
+    const data = await response.json();
+    const card = data.data[0];
+
+    if (!card?.tcgplayer?.prices) return null;
+
+    const prices = card.tcgplayer.prices;
+    return prices.holofoil?.market || prices.normal?.market || null;
+  } catch (error) {
+    console.error("Error obteniendo precio de TCGPlayer: ", error.message);
+  }
+}
