@@ -157,7 +157,7 @@ export const fillInitialPrices = async (batchSize = 100) => {
       if (cards.length === 0) break;
 
       console.log(
-        `\n Lote ${Math.floor(proccessedCount / batchSize) + 1}: Procesando ${
+        `\n Lote ${Math.floor(processedCount / batchSize) + 1}: Procesando ${
           cards.length
         } cartas...`
       );
@@ -166,13 +166,13 @@ export const fillInitialPrices = async (batchSize = 100) => {
         try {
           await syncAggregatedPrice(card.id);
           successCount++;
-          proccessedCount++;
+          processedCount++;
 
           // Se muestra el proceso cada 10 cartas
           if (successCount % 10 === 0) {
             const percentage = ((processedCount / totalCards) * 100).toFixed(1);
             console.log(
-              `Progreso: ${proccessedCount}/${totalCards} (${percentage}%)`
+              `Progreso: ${processedCount}/${totalCards} (${percentage}%)`
             );
           }
         } catch (error) {

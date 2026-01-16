@@ -3,7 +3,10 @@ import cors from "cors";
 import dotenv from "dotenv";
 import { query } from "./src/config/db.js";
 import mainRouter from "./src/routes/mainRouter.js";
-import { startAllSchedulers } from "./src/jobs/scheduler.cron.js";
+import {
+  startAllSchedulers,
+  fillInitialPrices,
+} from "./src/jobs/scheduler.cron.js";
 
 dotenv.config();
 
@@ -21,6 +24,17 @@ app.get("/", (req, res) => {
   res.send("API de Poke Price Tracker funcionando");
 });
 
+// Endpoint manual para llenar los precios
+app.post("/api/admin/fill-prices", async (req, res) => {
+  try {
+    const batchSize = req.query.batch ? parseInt(req.query.batch) : 100;
+    const result = await fillInitialPrices(batchSize);
+    res.json(result);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Prueba de conexion a Supabase
 async function testDbConnection() {
   try {
@@ -33,7 +47,7 @@ async function testDbConnection() {
 
 testDbConnection();
 
-startAllSchedulers();
+startAllSchedulers(false);
 
 app.listen(PORT, () => {
   console.log("Servidor corriendo en el puerto", PORT);
