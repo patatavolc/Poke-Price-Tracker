@@ -48,6 +48,7 @@ export const updateCardPrice = async (cardId) => {
     return price;
   } catch (error) {
     console.error(`Error actualizando precio de ${card.id}:`, error.message);
+    throw error;
   }
 };
 
@@ -56,7 +57,7 @@ export const syncPriceByCardId = async (cardId) => {
     // Consultar la API externa
     const response = await fetch(`${POKEMON_TCG_API_URL}/cards/${cardId}`, {
       headers: {
-        "X-Api-Key": process.env.POKEMON_TCG_API_KEY|| "",
+        "X-Api-Key": process.env.POKEMON_TCG_API_KEY || "",
       },
     });
 
@@ -88,4 +89,3 @@ export const syncPriceByCardId = async (cardId) => {
     throw error;
   }
 };
-

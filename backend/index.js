@@ -3,6 +3,7 @@ import cors from "cors";
 import dotenv from "dotenv";
 import { query } from "./src/config/db.js";
 import mainRouter from "./src/routes/mainRouter.js";
+import { startAllSchedulers } from "./src/jobs/scheduler.cron.js";
 
 dotenv.config();
 
@@ -19,6 +20,7 @@ app.use("/api", mainRouter);
 app.get("/", (req, res) => {
   res.send("API de Poke Price Tracker funcionando");
 });
+
 // Prueba de conexion a Supabase
 async function testDbConnection() {
   try {
@@ -30,6 +32,8 @@ async function testDbConnection() {
 }
 
 testDbConnection();
+
+startAllSchedulers();
 
 app.listen(PORT, () => {
   console.log("Servidor corriendo en el puerto", PORT);
