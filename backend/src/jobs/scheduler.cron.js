@@ -112,11 +112,118 @@ export const schedulePriceUpdates = () => {
 };
 
 /**
- * Inicia todas las tareas programadas
+ * Llena los precios iniciales de todas las cartas sin precio
+ * Esta funcion procesa las cartas en lotes, asi no se satura la API
  */
-export const startAllSchedulers = () => {
+export const fillInitialPrices = async (batchSize = 100) => {
+  console.log("\n Iniciando llenado de precios iniciales...\n");
+
+  try {
+    // Contar cartas sin pecio
+    const { rows: countRows } = await query(` 
+      SELECT COUNT(DISTINCT c.id) as total
+      FROM cards c
+      LEFT JOIN price_history ph ON c.id = ph.card_id
+      WHERE ph.id IS NULL
+      `);
+
+    const totalCards = parseInt(countRows[0].total);
+
+    if (totalCards === 0) {
+      console.log("Todas las cartas ya tienen precios registrados");
+      return { success: true, total: 0, processed: 0 };
+    }
+
+    console.log(`${totalCards} cartas sin precio encontradas`);
+    console.log(`Procesando en lotes de ${batchSize} cartas... \n`);
+
+    let processedCount = 0;
+    let successCount = 0;
+    let errorCount = 0;
+
+    while (processedCount < totalCards) {
+      // Obtener siguiente lote de cartas sin precio
+      const { rows: cards } = await query(
+        ` 
+          SELECT c.id, c.name
+          FROM cards c
+          LEFT JOIN price_history ph ON c.id = ph.card_id
+          WHERE ph.id IS NULL
+          LIMIT $1
+          `,
+        [batchSize]
+      );
+
+      if (cards.length === 0) break;
+
+      console.log(
+        `\n Lote ${Math.floor(proccessedCount / batchSize) + 1}: Procesando ${
+          cards.length
+        } cartas...`
+      );
+
+      for (const card of cards) {
+        try {
+          await syncAggregatedPrice(card.id);
+          successCount++;
+          proccessedCount++;
+
+          // Se muestra el proceso cada 10 cartas
+          if (successCount % 10 === 0) {
+            const percentage = ((processedCount / totalCards) * 100).toFixed(1);
+            console.log(
+              `Progreso: ${proccessedCount}/${totalCards} (${percentage}%)`
+            );
+          }
+        } catch (error) {
+          errorCount++;
+          processedCount++;
+          console.error(`Error en ${card.name}:`, error.message);
+        }
+
+        // Espera para no saturar la API
+        await new Promise((resolve) => setTimeout(resolve, 100));
+      }
+      console.log(
+        `Lote completado: ${successCount} exitosos, ${errorCount} errores`
+      );
+    }
+
+    console.log("\n Llenado de precio completado");
+    console.log(`Total procesados: ${processedCount}`);
+    console.log(`✅ Exitosas: ${successCount}`);
+    console.log(`❌ Errores: ${errorCount}`);
+
+    return {
+      success: true,
+      total: totalCards,
+      processed: processedCount,
+      successful: successCount,
+      errors: errorCount,
+    };
+  } catch (error) {
+    console.error("Error en fillInitialPrices:", error.message);
+    throw error;
+  }
+};
+
+/**
+ * Inicia todas las tareas programadas
+ * @param {boolean} fillPricesFirst - Si es true, llena los precios antes de iniciar los cron jobs
+ */
+export const startAllSchedulers =async (fillPricesFirst = false) => {
   console.log("\n Iniciando sistema de tareas programadas...\n");
 
+  //Llenar precios iniciales si se solicita
+  if(fillPricesFirst){
+    try {
+      await fillInitialPrices(50); // Lotes de 50 cartas
+      console.log("Esperando 10 segundos...\n");
+      await new Promise(resolve => setTimeout(resolve, 10000))
+    } catch (error) {
+      console.error("Error llenando precios, Continuando con schedulers... \n");
+    }
+  }
   scheduleSetSync();
   scheduleCardSync();
   schedulePriceUpdates();
