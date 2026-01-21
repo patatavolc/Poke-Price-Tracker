@@ -1,0 +1,26 @@
+@import "tailwindcss";
+
+@theme {
+  --bg-app: #000814; /* Color de fondo principal*/
+  --card-bg: #001d3d; /* Contenedores y taretas*/
+  --ui-border: #003566; /* Border y elementos secundarios*/
+
+  /* Colores de marca y acciones*/
+  --brand-primary: #ffc300; 
+  --brand-highligth: #ffd60a;
+
+  /* Tipografias descriptivas*/
+  --font-main: var(--font-inter);
+  --font-display: var(--font-exo-2);
+}
+
+/* Aplicacion de estilos base */
+@layer base {
+  body {
+    @apply bg-app text-white font-main antialiased;
+  }
+
+  h1, h2, h3, .text-display {
+    @apply font-display font-bold- tracking-tight'
+  }
+}
