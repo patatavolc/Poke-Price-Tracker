@@ -47,7 +47,7 @@ async function testDbConnection() {
 
 testDbConnection();
 
-startAllSchedulers(false);
+startAllSchedulers(true);
 
 app.listen(PORT, () => {
   console.log("Servidor corriendo en el puerto", PORT);

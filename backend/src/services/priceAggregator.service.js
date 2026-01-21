@@ -63,7 +63,7 @@ async function getTCGPlayerPrice(cardName, localId) {
       `${POKEMON_TCG_API_URL}/cards?q=name:"${cardName}" number:${localId}`,
       {
         headers: { "X-Api-Key": process.env.POKEMON_TCG_API_KEY || "" },
-      }
+      },
     );
 
     if (!response.ok) return null;
@@ -76,8 +76,8 @@ async function getTCGPlayerPrice(cardName, localId) {
     const prices = card.tcgplayer.prices;
     return prices.holofoil?.market || prices.normal?.market || null;
   } catch (error) {
-    console.error("Error obteniendo precio de TCGPlayer: ", error.message);
-    return null
+    console.error("Error obteniendo precio de TCGPlayer:", error.message);
+    return null;
   }
 }
 
@@ -86,7 +86,7 @@ async function getCardmarketPrice(cardId) {
   try {
     // NOTA: Cardmarket requiere OAuth, esto es un placeholder
     const response = await fetch(`${CARDMARKET_API_URL}/products/${cardId}`);
-    
+
     if (!response.ok) return null;
 
     const data = await response.json();
@@ -97,13 +97,12 @@ async function getCardmarketPrice(cardId) {
   }
 }
 
-
 // Sincroniza precio agregado y lo guarda en el historial
 export const syncAggregatedPrice = async (cardId) => {
   try {
     const { rows } = await query(
       "SELECT name, local_id FROM cards WHERE id = $1",
-      [cardId]
+      [cardId],
     );
 
     if (rows.length === 0) {
@@ -114,29 +113,49 @@ export const syncAggregatedPrice = async (cardId) => {
 
     const priceData = await getAggregatedPrice(cardId, name, local_id);
 
+    // FIX: Si no hay precio, guardar y RETORNAR
     if (!priceData) {
-      console.log(`No se encontraron precios para ${name}`);
-      return null;
+      console.log(`⚠️  No se encontraron precios para ${name}`);
+
+      await query(
+        "INSERT INTO price_history (card_id, price, source) VALUES ($1, $2, $3)",
+        [cardId, 0, "not_found"],
+      );
+
+      return null; // ✅ AÑADIDO: Retornar aquí para no continuar
     }
 
     // Guardar cada fuente en el historial
     for (const source of priceData.sources) {
       await query(
         "INSERT INTO price_history (card_id, price, source) VALUES ($1, $2, $3)",
-        [cardId, source.priceUsd, source.source]
+        [cardId, source.priceUsd, source.source],
       );
     }
 
     // Guardar también el precio medio
     await query(
       "INSERT INTO price_history (card_id, price, source) VALUES ($1, $2, $3)",
-      [cardId, priceData.averagePriceUsd, "aggregated"]
+      [cardId, priceData.averagePriceUsd, "aggregated"],
     );
 
-    console.log(`Precios actualizados para ${name}: €${priceData.averagePriceEur}`);
+    console.log(
+      `✅ Precios actualizados para ${name}: €${priceData.averagePriceEur}`,
+    );
     return priceData;
   } catch (error) {
-    console.error(`Error sincronizando precio agregado:`, error.message);
+    console.error(`❌ Error sincronizando precio agregado:`, error.message);
+
+    // Guardar registro de error para evitar bucle infinito
+    try {
+      await query(
+        "INSERT INTO price_history (card_id, price, source) VALUES ($1, $2, $3)",
+        [cardId, 0, "error"],
+      );
+    } catch (dbError) {
+      console.error("Error guardando registro de error:", dbError.message);
+    }
+
     throw error;
   }
 };
