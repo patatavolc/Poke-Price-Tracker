@@ -1,31 +1,62 @@
 import { query } from "../config/db.js";
 
-const TCGDEX_URL = process.env.TCGDEX_API_URL;
+const POKEMON_TCG_API_URL = process.env.POKEMON_TCG_API_URL;
+const POKEMON_TCG_API_KEY = process.env.POKEMON_TCG_API_KEY;
 
 export const syncSetsFromAPI = async () => {
-  console.log("Intentando conectar a:", TCGDEX_URL);
+  console.log("Intentando conectar a:", POKEMON_TCG_API_URL);
   try {
     // Pedir los sets a la API
-    const response = await fetch(`${TCGDEX_URL}/sets`);
-    const sets = await response.json();
+    const response = await fetch(`${POKEMON_TCG_API_URL}/sets`, {
+      headers: {
+        "X-Api-Key": POKEMON_TCG_API_KEY,
+      },
+    });
+
+    console.log("Status de respuesta:", response.status);
+    console.log("Content-Type:", response.headers.get("content-type"));
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error("Error de la API:", errorText);
+      throw new Error(`API devolvió status ${response.status}`);
+    }
+
+    const result = await response.json();
+    const sets = result.data;
 
     console.log(`Sincornizando ${sets.length} sets...`);
 
     // Guardar cada set en la DB
     for (const set of sets) {
-      const cardCountValue = set.cardCount?.total || 0;
+      // Convertir fecha de YYYY/MM/DD a formato DATE (YYYY-MM-DD)
+      const releaseDate = set.releaseDate
+        ? set.releaseDate.replace(/\//g, "-")
+        : null;
 
-      const queryText = `
-        INSERT INTO sets (id, name, logo_url, card_count)
-        VALUES ($1, $2, $3, $4)
+      const queryText = ` 
+      INSERT INTO sets (id, name, series, total, release_date, symbol_url, logo_url)
+      VALUES ($1, $2, $3, $4, $5, $6, $7)
         ON CONFLICT (id) DO UPDATE
-        SET name = EXCLUDED.name, logo_url = EXCLUDED.logo_url, card_count = EXCLUDED.card_count`;
+        SET name = EXCLUDED.name, 
+            series = EXCLUDED.series, 
+            total = EXCLUDED.total,
+            release_date = EXCLUDED.release_date,
+            symbol_url = EXCLUDED.symbol_url,
+            logo_url = EXCLUDED.logo_url`;
 
-      // TCGdex devuelve el logo sin .png (a veces) por lo que lo normalizo
-      const logo = set.logo ? `${set.logo}.png` : null;
-
-      await query(queryText, [set.id, set.name, logo, cardCountValue]);
+      await query(queryText, [
+        set.id,
+        set.name,
+        set.series,
+        set.total,
+        releaseDate,
+        set.images?.symbol || null,
+        set.images?.logo || null,
+      ]);
     }
+
+    console.log(`✅ ${sets.length} sets sincronizados correctamente`);
 
     return { success: true, count: sets.length };
   } catch (error) {
@@ -78,7 +109,7 @@ export const syncCardsBySet = async (setId) => {
   } catch (error) {
     console.error(
       `Error sincronizando cartas del set ${setId}:`,
-      error.message
+      error.message,
     );
     throw error;
   }
@@ -89,7 +120,7 @@ export const syncAllCards = async () => {
     // Obtener todos los IDs de sets que hay en la DB
     const { rows: sets } = await query("SELECT id FROM sets");
     console.log(
-      `Iniciando sincronizacion masiva de cartas para ${sets.length} sets...`
+      `Iniciando sincronizacion masiva de cartas para ${sets.length} sets...`,
     );
 
     let totalCardsSynced = 0;
