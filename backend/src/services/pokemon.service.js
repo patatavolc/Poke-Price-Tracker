@@ -3,6 +3,8 @@ import { query } from "../config/db.js";
 const POKEMON_TCG_API_URL = process.env.POKEMON_TCG_API_URL;
 const POKEMON_TCG_API_KEY = process.env.POKEMON_TCG_API_KEY;
 
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
 export const syncSetsFromAPI = async () => {
   console.log("Intentando conectar a:", POKEMON_TCG_API_URL);
   try {
@@ -25,7 +27,7 @@ export const syncSetsFromAPI = async () => {
     const result = await response.json();
     const sets = result.data;
 
-    console.log(`Sincornizando ${sets.length} sets...`);
+    console.log(`Sincronizando ${sets.length} sets...`);
 
     // Guardar cada set en la DB
     for (const set of sets) {
@@ -65,50 +67,93 @@ export const syncSetsFromAPI = async () => {
   }
 };
 
-export const syncCardsBySet = async (setId) => {
+export const syncCardsBySet = async (setId, retries = 3) => {
   try {
     console.log(`Obteniendo cartas del set: ${setId}`);
 
-    // Pedir los detalles del set
-    const response = await fetch(`${TCGDEX_URL}/sets/${setId}`);
-    const setDetails = await response.json();
+    // Pedir las cartas del set
+    const response = await fetch(
+      `${POKEMON_TCG_API_URL}/cards?q=set.id:${setId}`,
+      {
+        headers: {
+          "X-Api-Key": POKEMON_TCG_API_KEY,
+        },
+      },
+    );
 
-    const cards = setDetails.cards || []; // Array de cartas
+    // Si es 504 y quedan reintentos, esperar y reintentar
+    if (response.status === 504 && retries > 0) {
+      console.log(
+        `⏳ Timeout en ${setId}, reintentando en 3 segundos... (${retries} intentos restantes)`,
+      );
+      await sleep(3000);
+      return syncCardsBySet(setId, retries - 1);
+    }
 
-    if (!cards || cards.length === 0) {
-      console.log(`El set ${setId} no devolvio cartas en el array .cards`);
+    // Si es 404, el set no existe en la API, skip
+    if (response.status === 404) {
+      console.log(`⚠️ Set ${setId} no encontrado en la API (404), saltando...`);
+      return { success: true, count: 0, skipped: true };
+    }
+
+    if (!response.ok) {
+      throw new Error(`La API devolvio status ${response.status}`);
+    }
+
+    const result = await response.json();
+    const cards = result.data || [];
+
+    if (cards.length === 0) {
+      console.log(`⚠️ El set ${setId} no tiene cartas disponibles`);
       return { success: true, count: 0 };
     }
+
+    console.log(`Sincronizando ${cards.length} cartas del set ${setId}...`);
 
     // Insertar cartas en la DB
     for (const card of cards) {
       const queryText = `
-        INSERT INTO cards (id, name, image_url, local_id, set_id)
-        VALUES ($1, $2, $3, $4, $5)
+        INSERT INTO cards (
+          id, set_id, name, supertype, subtypes, types, 
+          artist, rarity, image_small, image_large, 
+          tcgplayer_url, cardmarket_url
+        )
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
         ON CONFLICT (id) DO UPDATE 
         SET name = EXCLUDED.name, 
-            image_url = EXCLUDED.image_url, 
-            local_id = EXCLUDED.local_id,
+            supertype = EXCLUDED.supertype,
+            subtypes = EXCLUDED.subtypes,
+            types = EXCLUDED.types,
+            artist = EXCLUDED.artist,
+            rarity = EXCLUDED.rarity,
+            image_small = EXCLUDED.image_small,
+            image_large = EXCLUDED.image_large,
+            tcgplayer_url = EXCLUDED.tcgplayer_url,
+            cardmarket_url = EXCLUDED.cardmarket_url,
             updated_at = NOW();
       `;
 
-      // Normalizar la url de la imagen
-      const imageUrl = card.image ? `${card.image}/high.png` : null;
-
       await query(queryText, [
         card.id,
+        card.set.id, // ← CORREGIDO: Añadido set_id
         card.name,
-        imageUrl,
-        card.localId,
-        setId,
+        card.supertype || null,
+        card.subtypes || [],
+        card.types || [],
+        card.artist || null,
+        card.rarity || null,
+        card.images?.small || null,
+        card.images?.large || null,
+        card.tcgplayer?.url || null,
+        card.cardmarket?.url || null,
       ]);
     }
 
-    console.log(`${cards.length} cartas sincronizadas para el set ${setId}`);
+    console.log(`✅ ${cards.length} cartas sincronizadas para el set ${setId}`);
     return { success: true, count: cards.length };
   } catch (error) {
     console.error(
-      `Error sincronizando cartas del set ${setId}:`,
+      `❌ Error sincronizando cartas del set ${setId}:`,
       error.message,
     );
     throw error;
@@ -118,27 +163,59 @@ export const syncCardsBySet = async (setId) => {
 export const syncAllCards = async () => {
   try {
     // Obtener todos los IDs de sets que hay en la DB
-    const { rows: sets } = await query("SELECT id FROM sets");
+    const { rows: sets } = await query("SELECT id FROM sets ORDER BY id");
     console.log(
       `Iniciando sincronizacion masiva de cartas para ${sets.length} sets...`,
     );
 
     let totalCardsSynced = 0;
+    let successCount = 0;
+    let failCount = 0;
+    let skippedCount = 0;
 
     // Recorrer cada set y llamar a la logica de sincronizacion
-    for (const set of sets) {
+    for (let i = 0; i < sets.length; i++) {
+      const set = sets[i];
       try {
+        console.log(`\nProgreso: ${i + 1}/${sets.length} sets procesados`);
+
         const result = await syncCardsBySet(set.id);
-        totalCardsSynced += result.count;
-        console.log(`Progreso: ${totalCardsSynced} cartas en total`);
+
+        if (result.skipped) {
+          skippedCount++;
+        } else {
+          totalCardsSynced += result.count;
+          successCount++;
+        }
+
+        console.log(`Total acumulado: ${totalCardsSynced} cartas`);
+
+        // Esperar 1 segundo entre cada set para no saturar la API
+        if (i < sets.length - 1) {
+          await sleep(1000);
+        }
       } catch (error) {
-        console.error(`Fallo en el set ${set.id}: ${error.message}`);
-        // Seguir con el siguiente set aunque falle
+        failCount++;
+        console.error(`❌ Fallo en el set ${set.id}: ${error.message}`);
+        // Esperar 2 segundos extra si hubo error
+        await sleep(2000);
         continue;
       }
     }
 
-    return { success: true, total: totalCardsSynced };
+    console.log(`\n===== SINCRONIZACIÓN COMPLETADA =====`);
+    console.log(`✅ Sets exitosos: ${successCount}`);
+    console.log(`⚠️ Sets no encontrados (404): ${skippedCount}`);
+    console.log(`❌ Sets fallidos: ${failCount}`);
+    console.log(`📦 Total de cartas sincronizadas: ${totalCardsSynced}`);
+
+    return {
+      success: true,
+      total: totalCardsSynced,
+      successCount,
+      failCount,
+      skippedCount,
+    };
   } catch (error) {
     console.error("Error en syncAllCards:", error.message);
     throw error;
