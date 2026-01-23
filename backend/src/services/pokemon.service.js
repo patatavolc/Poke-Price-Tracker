@@ -221,3 +221,87 @@ export const syncAllCards = async () => {
     throw error;
   }
 };
+
+export const syncMissingSetsCards = async () => {
+  try {
+    // Obtener sets que no tienen cartas sincronizadas
+    const queryText = `
+    SELECT 
+      s.id, 
+      s.name, 
+      s.total AS expected_cards,
+    COUNT(c.id) AS synced_cards
+    FROM sets s
+    LEFT JOIN cards c ON s.id = c.set_id
+    GROUP BY s.id, s.name, s.total
+    HAVING COUNT(c.id) = 0
+    ORDER BY s.release_date DESC
+    `;
+
+    const { rows: missingSets } = await query(queryText);
+
+    if (missingSets.length === 0) {
+      console.log("Todos los sets tienen cartas sincronizadas");
+      return { success: true, total: 0, missingSets: 0 };
+    }
+
+    console.log(`Encontrados ${missingSets.length} sets sin cartas`);
+    console.log("Iniciando sincronizacion de sets restantes...");
+
+    let totalCardsSynced = 0;
+    let successCount = 0;
+    let failCount = 0;
+    let skippedCount = 0;
+
+    for (let i = 0; i < missingSets.length; i++) {
+      const set = missingSets[i];
+      try {
+        console.log(
+          `\n Progreso: ${i + 1}/${missingSets.length} - Set: ${set.id} (${set.name})`,
+        );
+
+        const result = await syncCardsBySet(set.id);
+
+        if (result.skipped) {
+          skippedCount++;
+        } else if (result.count > 0) {
+          totalCardsSynced += result.count;
+          successCount++;
+        } else {
+          console.log(`Set ${set.id} devolvio 0 cartas`);
+          skippedCount++;
+        }
+
+        console.log(`Total acumulado: ${totalCardsSynced} cartas`);
+
+        // Esperar 1.5 sec entre cada set
+        if (i < missingSets.length - 1) {
+          await sleep(1500);
+        }
+      } catch (error) {
+        failCount++;
+        console.error(`Fallo en el set ${set.id}: ${error.message}`);
+        await sleep(2000);
+        continue;
+      }
+    }
+
+    console.log("\n ===== Sincronizcion de Sets Faltantes completada =====");
+    console.log(`✅ Sets exitosos: ${successCount}`);
+    console.log(`⚠️ Sets sin cartas/no encontrados: ${skippedCount}`);
+    console.log(`❌ Sets fallidos: ${failCount}`);
+    console.log(`📦 Total de cartas sincronizadas: ${totalCardsSynced}`);
+
+    return {
+      success: true,
+      total: totalCardsSynced,
+      successCount,
+      failCount,
+      skippedCount,
+      missingSets: missingSets.length,
+    };
+  } catch (error) {
+    console.error("Error en syncMissingSetsCards:", error.message);
+    throw error;
+  }
+};
