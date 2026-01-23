@@ -2,6 +2,7 @@ import {
   syncSetsFromAPI,
   syncCardsBySet,
   syncAllCards,
+  syncMissingSetsCards,
 } from "../services/pokemon.service.js";
 
 export const syncSets = async (req, res) => {
@@ -34,10 +35,20 @@ export const syncCards = async (req, res) => {
 export const syncAll = (req, res) => {
   // Se quita el await para que no bloquee la respuesta HTTP
   syncAllCards()
-    .then(result => console.log(`Proceso terminado: ${result.total} cartas.`))
-    .catch(error => console.error("Error en segundo plano:", error.message));
+    .then((result) => console.log(`Proceso terminado: ${result.total} cartas.`))
+    .catch((error) => console.error("Error en segundo plano:", error.message));
 
   res.status(202).json({
-    message: "Sincronización masiva iniciada en segundo plano. Revisa la terminal para ver el progreso.",
+    message:
+      "Sincronización masiva iniciada en segundo plano. Revisa la terminal para ver el progreso.",
   });
+};
+
+export const syncMissing = async (req, res) => {
+  try {
+    const result = await syncMissingSetsCards();
+    res.json(result);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
 };
