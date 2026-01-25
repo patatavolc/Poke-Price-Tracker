@@ -69,3 +69,18 @@ export const syncPrices = (req, res) => {
       "Sincronizacion de TODOS los precios iniciada en segundo plano. Revisa la terminal.",
   });
 };
+
+export const syncMissingPricesCtrl = (req, res) => {
+  syncMissingPrices()
+    .then((result) =>
+      console.log(
+        `Proceso terminado: ${result.success} precios faltantes sincronizados}`,
+      ),
+    )
+    .catch((error) => console.error("Error en segundo plano:", error.message));
+
+  res.status(202).json({
+    message:
+      "Sincronizacion de precios faltantes iniciada en segundo plano. Revisa la terminal",
+  });
+};
