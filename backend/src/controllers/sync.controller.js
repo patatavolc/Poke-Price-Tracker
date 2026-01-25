@@ -5,6 +5,8 @@ import {
   syncMissingSetsCards,
 } from "../services/pokemon.service.js";
 
+import { syncAllPrices, syncMissingPrices } from "../services/price.service.js";
+
 export const syncSets = async (req, res) => {
   try {
     const result = await syncSetsFromAPI();
@@ -51,4 +53,19 @@ export const syncMissing = async (req, res) => {
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
+};
+
+export const syncPrices = (req, res) => {
+  syncAllPrices()
+    .then((result) =>
+      console.log(
+        `Proceso de precios terminado: ${result.successCount} precios sincronizados`,
+      ),
+    )
+    .catch((error) => console.error("Error en segundo plano:", error.message));
+
+  res.status(202).json({
+    message:
+      "Sincronizacion de TODOS los precios iniciada en segundo plano. Revisa la terminal.",
+  });
 };
