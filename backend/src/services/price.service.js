@@ -96,90 +96,74 @@ async function getPriceChartingPrice(cardName, setName) {
   }
 }
 
-export const updateCardPrice = async (cardId) => {
+// Obtiene precios de multiples fuentes y calcula la media
+export const getAggregatedPrice = async (cardId, cardName, setName = "") => {
   try {
-    // Obtener datos de la carta de la DB
-    const { rows } = await query(
-      "SELECT name, local_id, id FROM cards WHERE id = $1",
-      [cardId],
-    );
-    if (rows.length === 0) {
-      throw new Error("Carta no enctrada en la DB");
+    const eurToUsdRate = await getExchangeRate();
+    const usdToEurRate = 1 / eurToUsdRate;
+
+    console.log(`Consultando precios para: ${cardName}...`);
+
+    // Consultar precios de diferentes fuentes en paralelo
+    const [tcgPrice, tcgdexPrice, priceChartingPrice] = await Promise.all([
+      getTCGPlayerPrice(cardId),
+      getTCGdexPrice(cardId),
+      getPriceChartingPrice(cardName, setName),
+    ]);
+
+    const validPrices = [];
+
+    if (tcgPrice) {
+      validPrices.push({
+        source: tcgPrice.source,
+        priceUsd: tcgPrice.priceUsd,
+        priceEur: tcgPrice.priceUsd * usdToEurRate,
+      });
+      console.log(` 💵 TCGPlayer: $${tcgPrice.priceUsd}`);
     }
 
-    const card = rows[0];
+    if (tcgdexPrice) {
+      validPrices.push({
+        source: tcgdexPrice.source,
+        priceEur: tcgdexPrice.priceEur,
+        priceUsd: tcgdexPrice.priceEur * eurToUsdRate,
+      });
+      console.log(`💵 Cardmarket (TCGdex): €${tcgdexPrice.priceEur}`);
+    }
 
-    // Consultar precio en la otra api
-    // Se busca por numero local y nombre
-    const response = await fetch(
-      `${POKEMON_TCG_API_URL}/cards?q=name:"${card.name}" number:${card.local_id}`,
-      {
-        headers: { "X-Api-Key": process.env.POKEMON_TCG_API_KEY },
-      },
-    );
+    if (priceChartingPrice) {
+      validPrices.push({
+        source: priceChartingPrice.source,
+        priceUsd: priceChartingPrice.priceUsd,
+        priceEur: priceChartingPrice.priceUsd * usdToEurRate,
+      });
+      console.log(`💵 PriceCharting: $${priceChartingPrice.priceUsd}`);
+    }
 
-    const data = await response.json();
-    const externalCard = data.data[0];
-
-    if (!externalCard || !externalCard.tcgplayer) {
-      console.log(`No se encontro precio para ${card.name}`);
+    if (validPrices.length === 0) {
+      console.log("Sin precios disponibles");
       return null;
     }
 
-    // Extraer el precio
-    const price =
-      externalCard.tcgplayer.prices.holofoil?.market ||
-      externalCard.tcgplayer.prices.normal?.market ||
-      0;
+    // Calcular la media
+    const avgEur =
+      validPrices.reduce((sum, p) => sum + p.priceEur, 0) / validPrices.length;
 
-    // Guardar en price_history
-    await query(
-      "INSERT INTO price_history (card_id, price, source) VALUES ($1, $2, $3)",
-      [card.id, price, "tcgplayer"],
+    const avgUsd =
+      validPrices.reduce((sum, p) => sum + p.priceUsd, 0) / validPrices.length;
+
+    console.log(
+      `Promedio: €${avgEur.toFixed(2)} / $${avgUsd.toFixed(2)} (${validPrices.length}) fuentes`,
     );
 
-    console.log(`Precio actualizado para ${card.name}: $${price}`);
-    return price;
+    return {
+      averagePriceEur: parseFloat(avgEur.toFixed(2)),
+      averagePriceUsd: parseFloat(avgUsd.toFixed(2)),
+      sources: validPrices,
+      sourceCount: validPrices.length,
+    };
   } catch (error) {
-    console.error(`Error actualizando precio de ${card.id}:`, error.message);
-    throw error;
-  }
-};
-
-export const syncPriceByCardId = async (cardId) => {
-  try {
-    // Consultar la API externa
-    const response = await fetch(`${POKEMON_TCG_API_URL}/cards/${cardId}`, {
-      headers: {
-        "X-Api-Key": process.env.POKEMON_TCG_API_KEY || "",
-      },
-    });
-
-    if (!response.ok) throw new Error(`Error API Precios: ${response.status}`);
-
-    const { data } = await response.json();
-
-    // Extraer el precio de TCGPlayer (Market Price)
-    // Intentamos obtener el precio 'holofoil', si no 'normal'
-    const prices = data.tcgplayer?.prices;
-    const marketPrice = prices?.holofoil?.market || prices?.normal?.market || 0;
-
-    if (marketPrice === 0) {
-      console.log(`No se encontró precio de mercado para ${cardId}`);
-      return null;
-    }
-
-    // 3. Insertar en el historial
-    const sql = `
-      INSERT INTO price_history (card_id, price, source)
-      VALUES ($1, $2, $3)
-    `;
-
-    await query(sql, [cardId, marketPrice, "tcgplayer"]);
-
-    return marketPrice;
-  } catch (error) {
-    console.error(`Error en syncPriceByCardId (${cardId}):`, error.message);
+    console.error(`Error agregando precios para ${cardId}:`, error.message);
     throw error;
   }
 };
