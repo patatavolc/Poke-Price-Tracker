@@ -21,12 +21,11 @@ async function getTCGPlayerPrice(cardId) {
 
     if (!prices) return null;
 
-    // Intentar obtener el precio de cualquier variante disponible
     const priceVariants = [
       prices.holofoil?.market,
       prices.reverseHolofoil?.market,
       prices.normal?.market,
-      prices.unlimitedHolofiol?.market,
+      prices.unlimitedHolofoil?.market,
       prices["1stEditionHolofoil"]?.market,
     ];
 
@@ -34,7 +33,7 @@ async function getTCGPlayerPrice(cardId) {
 
     return price ? { priceUsd: price, source: "tcgplayer" } : null;
   } catch (error) {
-    console.error("Error TCGPlayer: ", error.message);
+    console.error("Error TCGPlayer:", error.message);
     return null;
   }
 }
@@ -48,12 +47,10 @@ async function getTCGdexPrice(cardId) {
 
     const card = await response.json();
 
-    // TCGDex tiene precios de Cardmarket en la propiedad 'cardmarket'
     const cardMarketPrices = card.cardmarket;
 
     if (!cardMarketPrices) return null;
 
-    // Intentar obtener precio promedio, tendencia o bajo
     const priceEur =
       cardMarketPrices.averageSellPrice ||
       cardMarketPrices.trendPrice ||
@@ -75,7 +72,7 @@ async function getPriceChartingPrice(cardName, setName) {
       `https://www.pricecharting.com/api/products?q=${searchQuery}&type=pokemon-card&t=${Date.now()}`,
       {
         headers: {
-          "User-Agent": "Mozilla/5.0 (compatrible; PokePriceTracker/1.0)",
+          "User-Agent": "Mozilla/5.0 (compatible; PokePriceTracker/1.0)",
         },
       },
     );
@@ -96,7 +93,65 @@ async function getPriceChartingPrice(cardName, setName) {
   }
 }
 
-// Obtiene precios de multiples fuentes y calcula la media
+// ===== FUNCIONES EXPORTADAS =====
+
+// Función simple para obtener precio solo de TCGPlayer
+export const syncPriceByCardId = async (cardId, retries = 3) => {
+  try {
+    const response = await fetch(`${POKEMON_TCG_API_URL}/cards/${cardId}`, {
+      headers: { "X-Api-Key": POKEMON_TCG_API_KEY },
+    });
+
+    if (response.status === 504 && retries > 0) {
+      console.log(`⏳ Timeout obteniendo precio de ${cardId}, reintentando...`);
+      await sleep(3000);
+      return syncPriceByCardId(cardId, retries - 1);
+    }
+
+    if (!response.ok) {
+      console.log(`⚠️ Error API para ${cardId}: ${response.status}`);
+      return null;
+    }
+
+    const { data } = await response.json();
+    const prices = data.tcgplayer?.prices;
+
+    if (!prices) return null;
+
+    const priceVariants = [
+      prices.holofoil?.market,
+      prices.reverseHolofoil?.market,
+      prices.normal?.market,
+      prices.unlimitedHolofoil?.market,
+      prices["1stEditionHolofoil"]?.market,
+    ];
+
+    const priceUsd = priceVariants.find((p) => p && p > 0);
+
+    if (!priceUsd) {
+      console.log(`💵 No se encontró precio para ${cardId}`);
+      return null;
+    }
+
+    const eurToUsdRate = await getExchangeRate();
+    const priceEur = priceUsd / eurToUsdRate;
+
+    await query(
+      "INSERT INTO price_history (card_id, price_usd, price_eur, source) VALUES ($1, $2, $3, $4)",
+      [cardId, priceUsd, priceEur.toFixed(2), "tcgplayer"],
+    );
+
+    console.log(
+      `💰 Precio actualizado: $${priceUsd} / €${priceEur.toFixed(2)}`,
+    );
+    return { priceUsd, priceEur };
+  } catch (error) {
+    console.error(`Error en syncPriceByCardId (${cardId}):`, error.message);
+    return null;
+  }
+};
+
+// Obtiene precios de múltiples fuentes y calcula la media
 export const getAggregatedPrice = async (cardId, cardName, setName = "") => {
   try {
     const eurToUsdRate = await getExchangeRate();
@@ -104,7 +159,6 @@ export const getAggregatedPrice = async (cardId, cardName, setName = "") => {
 
     console.log(`Consultando precios para: ${cardName}...`);
 
-    // Consultar precios de diferentes fuentes en paralelo
     const [tcgPrice, tcgdexPrice, priceChartingPrice] = await Promise.all([
       getTCGPlayerPrice(cardId),
       getTCGdexPrice(cardId),
@@ -119,7 +173,7 @@ export const getAggregatedPrice = async (cardId, cardName, setName = "") => {
         priceUsd: tcgPrice.priceUsd,
         priceEur: tcgPrice.priceUsd * usdToEurRate,
       });
-      console.log(` 💵 TCGPlayer: $${tcgPrice.priceUsd}`);
+      console.log(`  💵 TCGPlayer: $${tcgPrice.priceUsd}`);
     }
 
     if (tcgdexPrice) {
@@ -128,7 +182,7 @@ export const getAggregatedPrice = async (cardId, cardName, setName = "") => {
         priceEur: tcgdexPrice.priceEur,
         priceUsd: tcgdexPrice.priceEur * eurToUsdRate,
       });
-      console.log(`💵 Cardmarket (TCGdex): €${tcgdexPrice.priceEur}`);
+      console.log(`  💶 Cardmarket (TCGdex): €${tcgdexPrice.priceEur}`);
     }
 
     if (priceChartingPrice) {
@@ -137,15 +191,14 @@ export const getAggregatedPrice = async (cardId, cardName, setName = "") => {
         priceUsd: priceChartingPrice.priceUsd,
         priceEur: priceChartingPrice.priceUsd * usdToEurRate,
       });
-      console.log(`💵 PriceCharting: $${priceChartingPrice.priceUsd}`);
+      console.log(`  💵 PriceCharting: $${priceChartingPrice.priceUsd}`);
     }
 
     if (validPrices.length === 0) {
-      console.log("Sin precios disponibles");
+      console.log("  ⚠️ Sin precios disponibles");
       return null;
     }
 
-    // Calcular la media
     const avgEur =
       validPrices.reduce((sum, p) => sum + p.priceEur, 0) / validPrices.length;
 
@@ -153,7 +206,7 @@ export const getAggregatedPrice = async (cardId, cardName, setName = "") => {
       validPrices.reduce((sum, p) => sum + p.priceUsd, 0) / validPrices.length;
 
     console.log(
-      `Promedio: €${avgEur.toFixed(2)} / $${avgUsd.toFixed(2)} (${validPrices.length}) fuentes`,
+      `  📊 Promedio: €${avgEur.toFixed(2)} / $${avgUsd.toFixed(2)} (${validPrices.length} fuentes)`,
     );
 
     return {
@@ -182,7 +235,6 @@ export const syncAggregatedPrice = async (cardId) => {
 
     const { name, set_id } = rows[0];
 
-    // Obtener nombre del set
     const { rows: setRows } = await query(
       "SELECT name FROM sets WHERE id = $1",
       [set_id],
@@ -192,11 +244,10 @@ export const syncAggregatedPrice = async (cardId) => {
     const priceData = await getAggregatedPrice(cardId, name, setName);
 
     if (!priceData) {
-      console.log(`No se encontraron precios para ${name}`);
+      console.log(`⚠️ No se encontraron precios para ${name}`);
       return null;
     }
 
-    // Guardar cada fuente en el historial
     for (const source of priceData.sources) {
       await query(
         "INSERT INTO price_history (card_id, price_usd, price_eur, source) VALUES ($1, $2, $3, $4)",
@@ -209,7 +260,7 @@ export const syncAggregatedPrice = async (cardId) => {
     );
     return priceData;
   } catch (error) {
-    console.error("Error sincronizando precio agregado:", error.message);
+    console.error("❌ Error sincronizando precio agregado:", error.message);
     throw error;
   }
 };
@@ -218,16 +269,16 @@ export const syncAggregatedPrice = async (cardId) => {
 export const syncMissingPrices = async () => {
   try {
     const { rows: cards } = await query(
-      "SELECT id, name FROM cards WHERE last_price_usd IS NULL OR las_price_eur IS NULL ORDER BY id",
+      "SELECT id, name FROM cards WHERE last_price_usd IS NULL OR last_price_eur IS NULL ORDER BY id",
     );
 
     if (cards.length === 0) {
-      console.log("Todas las cartas tienen precios sincronizados");
+      console.log("✅ Todas las cartas tienen precios sincronizados");
       return { success: true, total: 0 };
     }
 
-    console.log(`Encontradas ${cards.length} cartas sin precio`);
-    console.log("Iniciando sincronizacion de precios faltantes...");
+    console.log(`🔍 Encontradas ${cards.length} cartas sin precio`);
+    console.log("🚀 Iniciando sincronización de precios faltantes...");
 
     let successCount = 0;
     let skippedCount = 0;
@@ -237,7 +288,7 @@ export const syncMissingPrices = async () => {
       const card = cards[i];
 
       try {
-        console.log(`\n Progreso: ${i + 1}/${cards.length} - ${card.name}`);
+        console.log(`\n📊 Progreso: ${i + 1}/${cards.length} - ${card.name}`);
 
         const result = await syncAggregatedPrice(card.id);
 
@@ -247,18 +298,20 @@ export const syncMissingPrices = async () => {
           skippedCount++;
         }
 
-        // Esperar 2.5 segundos entre carta y carta
         if (i < cards.length - 1) {
           await sleep(2500);
         }
       } catch (error) {
         failCount++;
-        console.error(`Error en carta ${cardId}: ${error.message}`);
+        console.error(`❌ Error en carta ${card.id}: ${error.message}`);
+        await sleep(3000);
         continue;
       }
     }
 
-    console.log(`\n===== SINCRONIZACIÓN DE PRECIOS FALTANTES COMPLETADA =====`);
+    console.log(
+      `\n🎉 ===== SINCRONIZACIÓN DE PRECIOS FALTANTES COMPLETADA =====`,
+    );
     console.log(`✅ Precios sincronizados: ${successCount}`);
     console.log(`⚠️ Sin precio disponible: ${skippedCount}`);
     console.log(`❌ Errores: ${failCount}`);
@@ -283,7 +336,7 @@ export const syncAllPrices = async () => {
       "SELECT id, name FROM cards ORDER BY id",
     );
     console.log(
-      `Iniciando sincronizacion de precios para ${cards.length} cartas...`,
+      `🚀 Iniciando sincronización de precios para ${cards.length} cartas...`,
     );
 
     let successCount = 0;
@@ -294,7 +347,7 @@ export const syncAllPrices = async () => {
       const card = cards[i];
 
       try {
-        console.log(`\n Progreso: ${i + 1}/${cards.length} - ${card.name}`);
+        console.log(`\n📊 Progreso: ${i + 1}/${cards.length} - ${card.name}`);
 
         const result = await syncAggregatedPrice(card.id);
 
@@ -304,7 +357,6 @@ export const syncAllPrices = async () => {
           skippedCount++;
         }
 
-        // Esperar 2.5 segundos entre cada carta
         if (i < cards.length - 1) {
           await sleep(2500);
         }
@@ -329,7 +381,7 @@ export const syncAllPrices = async () => {
       total: cards.length,
     };
   } catch (error) {
-    console.error('Error en syncAllPrices:', error.message);
+    console.error("Error en syncAllPrices:", error.message);
     throw error;
   }
 };
