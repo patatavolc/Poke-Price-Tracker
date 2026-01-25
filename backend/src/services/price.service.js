@@ -1,6 +1,42 @@
 import { query } from "../config/db.js";
+import { getExchangeRate } from "./currency.service.js";
 
 const POKEMON_TCG_API_URL = process.env.POKEMON_TCG_API_URL;
+const POKEMON_TCG_API_KEY = process.env.POKEMON_TCG_API_KEY;
+const TCGDEX_API_URL = process.env.TCGDEX_API_URL;
+
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+async function getTCGPlayerPrice(cardId) {
+  try {
+    const response = await fetch(`${POKEMON_TCG_API_URL}/cards/${cardId}`, {
+      headers: { 'X-Api-Key': POKEMON_TCG_API_KEY},
+    })
+
+    if (!response.ok) return null;
+
+    const { data } = await response.json();
+    const prices = data.tcgplayer?.prices;
+
+    if(!prices) return null;
+
+    // Intentar obtener el precio de cualquier variante disponible
+    const priceVariants = [
+      prices.holofoil?.market,
+      prices.reverseHolofoil?.market,
+      prices.normal?.market,
+      prices.unlimitedHolofiol?.market,
+      prices['1stEditionHolofoil']?.market,
+    ];
+
+    const price = priceVariants.find(p => p && p > 0);
+
+    return price ? { priceUsd: price, source: 'tcgplayer'} : null;
+  } catch (error) {
+    console.error("Error TCGPlayer: ", error.message);
+    return null
+  }
+}
 
 export const updateCardPrice = async (cardId) => {
   try {
