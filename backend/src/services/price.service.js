@@ -7,18 +7,19 @@ const TCGDEX_API_URL = process.env.TCGDEX_API_URL;
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
+// Obtiene precio de TCGPlayer (USD)
 async function getTCGPlayerPrice(cardId) {
   try {
     const response = await fetch(`${POKEMON_TCG_API_URL}/cards/${cardId}`, {
-      headers: { 'X-Api-Key': POKEMON_TCG_API_KEY},
-    })
+      headers: { "X-Api-Key": POKEMON_TCG_API_KEY },
+    });
 
     if (!response.ok) return null;
 
     const { data } = await response.json();
     const prices = data.tcgplayer?.prices;
 
-    if(!prices) return null;
+    if (!prices) return null;
 
     // Intentar obtener el precio de cualquier variante disponible
     const priceVariants = [
@@ -26,15 +27,43 @@ async function getTCGPlayerPrice(cardId) {
       prices.reverseHolofoil?.market,
       prices.normal?.market,
       prices.unlimitedHolofiol?.market,
-      prices['1stEditionHolofoil']?.market,
+      prices["1stEditionHolofoil"]?.market,
     ];
 
-    const price = priceVariants.find(p => p && p > 0);
+    const price = priceVariants.find((p) => p && p > 0);
 
-    return price ? { priceUsd: price, source: 'tcgplayer'} : null;
+    return price ? { priceUsd: price, source: "tcgplayer" } : null;
   } catch (error) {
     console.error("Error TCGPlayer: ", error.message);
-    return null
+    return null;
+  }
+}
+
+// Obtiene el precio de TCGdex (precios de Cardmarket en EUR)
+async function getTCGdexPrice(cardId) {
+  try {
+    const response = await fetch(`${TCGDEX_API_URL}/cards/${cardId}`);
+
+    if (!response.ok) return null;
+
+    const card = await response.json();
+
+    // TCGDex tiene precios de Cardmarket en la propiedad 'cardmarket'
+    const cardMarketPrices = card.cardmarket;
+
+    if (!cardMarketPrices) return null;
+
+    // Intentar obtener precio promedio, tendencia o bajo
+    const priceEur =
+      cardMarketPrices.averageSellPrice ||
+      cardMarketPrices.trendPrice ||
+      cardMarketPrices.lowPrice ||
+      null;
+
+    return priceEur ? { priceEur, source: "cardmarket_tcgdex" } : null;
+  } catch (error) {
+    console.error("Error en TCGdex:", error.message);
+    return null;
   }
 }
 
@@ -43,7 +72,7 @@ export const updateCardPrice = async (cardId) => {
     // Obtener datos de la carta de la DB
     const { rows } = await query(
       "SELECT name, local_id, id FROM cards WHERE id = $1",
-      [cardId]
+      [cardId],
     );
     if (rows.length === 0) {
       throw new Error("Carta no enctrada en la DB");
@@ -57,7 +86,7 @@ export const updateCardPrice = async (cardId) => {
       `${POKEMON_TCG_API_URL}/cards?q=name:"${card.name}" number:${card.local_id}`,
       {
         headers: { "X-Api-Key": process.env.POKEMON_TCG_API_KEY },
-      }
+      },
     );
 
     const data = await response.json();
@@ -77,7 +106,7 @@ export const updateCardPrice = async (cardId) => {
     // Guardar en price_history
     await query(
       "INSERT INTO price_history (card_id, price, source) VALUES ($1, $2, $3)",
-      [card.id, price, "tcgplayer"]
+      [card.id, price, "tcgplayer"],
     );
 
     console.log(`Precio actualizado para ${card.name}: $${price}`);
