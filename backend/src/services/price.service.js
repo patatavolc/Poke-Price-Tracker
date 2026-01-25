@@ -67,6 +67,35 @@ async function getTCGdexPrice(cardId) {
   }
 }
 
+// Precios de PriceCharting (USD)
+async function getPriceChartingPrice(cardName, setName) {
+  try {
+    const searchQuery = encodeURIComponent(`${cardName} ${setName}`);
+    const response = await fetch(
+      `https://www.pricecharting.com/api/products?q=${searchQuery}&type=pokemon-card&t=${Date.now()}`,
+      {
+        headers: {
+          "User-Agent": "Mozilla/5.0 (compatrible; PokePriceTracker/1.0)",
+        },
+      },
+    );
+
+    if (!response.ok) return null;
+
+    const data = await response.json();
+
+    if (!data.products || data.products.length === 0) return null;
+
+    const product = data.products[0];
+    const priceUsd = product["loose-price"] || product["cib-price"];
+
+    return priceUsd ? { priceUsd, source: "pricecharting" } : null;
+  } catch (error) {
+    console.error("Error PriceCharting:", error.message);
+    return null;
+  }
+}
+
 export const updateCardPrice = async (cardId) => {
   try {
     // Obtener datos de la carta de la DB
