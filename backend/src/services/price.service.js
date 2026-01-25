@@ -171,39 +171,107 @@ export const getAggregatedPrice = async (cardId, cardName, setName = "") => {
 // Sincroniza precio agregado y guarda en el historial
 export const syncAggregatedPrice = async (cardId) => {
   try {
-    const { rows } = await query("SELECT name, set_id FROM cards WHERE id = $1", [cardId]);
+    const { rows } = await query(
+      "SELECT name, set_id FROM cards WHERE id = $1",
+      [cardId],
+    );
 
-    if(rows.length === 0) {
-      throw new Error('Carta no encontrada en la DB');
+    if (rows.length === 0) {
+      throw new Error("Carta no encontrada en la DB");
     }
 
     const { name, set_id } = rows[0];
 
     // Obtener nombre del set
     const { rows: setRows } = await query(
-      "SELECT name FROM sets WHERE id = $1",[set_id]
-    )
+      "SELECT name FROM sets WHERE id = $1",
+      [set_id],
+    );
     const setName = setRows[0]?.name || "";
 
     const priceData = await getAggregatedPrice(cardId, name, setName);
 
-    if(!priceData) {
+    if (!priceData) {
       console.log(`No se encontraron precios para ${name}`);
-      return null
+      return null;
     }
 
     // Guardar cada fuente en el historial
     for (const source of priceData.sources) {
       await query(
-        "INSERT INTO price_history (card_id, price_usd, price_eur, source) VALUES ($1, $2, $3, $4)", [cardId, source.priceUsd, source.priceEur.toFixed(2), source.source],
-      )
+        "INSERT INTO price_history (card_id, price_usd, price_eur, source) VALUES ($1, $2, $3, $4)",
+        [cardId, source.priceUsd, source.priceEur.toFixed(2), source.source],
+      );
     }
 
-    console.log(`✅ Precios actualizados para ${name}: €${priceData.averagePriceEur} / $${priceData.averagePriceUsd}`);
+    console.log(
+      `✅ Precios actualizados para ${name}: €${priceData.averagePriceEur} / $${priceData.averagePriceUsd}`,
+    );
     return priceData;
   } catch (error) {
-    console.error('Error sincronizando precio agregado:', error.message);
+    console.error("Error sincronizando precio agregado:", error.message);
     throw error;
   }
-}
+};
 
+// Sincronizar precios solo de cartas sin precio
+export const syncMissingPrices = async () => {
+  try {
+    const { rows: cards } = await query(
+      "SELECT id, name FROM cards WHERE last_price_usd IS NULL OR las_price_eur IS NULL ORDER BY id",
+    );
+
+    if (cards.length === 0) {
+      console.log("Todas las cartas tienen precios sincronizados");
+      return { success: true, total: 0 };
+    }
+
+    console.log(`Encontradas ${cards.length} cartas sin precio`);
+    console.log("Iniciando sincronizacion de precios faltantes...");
+
+    let successCount = 0;
+    let skippedCount = 0;
+    let failCount = 0;
+
+    for (let i = 0; i < cards.length; i++) {
+      const card = cards[i];
+
+      try {
+        console.log(`\n Progreso: ${i + 1}/${cards.length} - ${card.name}`);
+
+        const result = await syncAggregatedPrice(card.id);
+
+        if (result) {
+          successCount++;
+        } else {
+          skippedCount++;
+        }
+
+        // Esperar 2.5 segundos entre carta y carta
+        if (i < cards.length - 1) {
+          await sleep(2500);
+        }
+      } catch (error) {
+        failCount++;
+        console.error(`Error en carta ${cardId}: ${error.message}`);
+        continue;
+      }
+    }
+
+    console.log(`\n===== SINCRONIZACIÓN DE PRECIOS FALTANTES COMPLETADA =====`);
+    console.log(`✅ Precios sincronizados: ${successCount}`);
+    console.log(`⚠️ Sin precio disponible: ${skippedCount}`);
+    console.log(`❌ Errores: ${failCount}`);
+
+    return {
+      success: true,
+      successCount,
+      skippedCount,
+      failCount,
+      total: cards.length,
+    };
+  } catch (error) {
+    console.error("Error en syncMissingPrices:", error.message);
+    throw error;
+  }
+};
