@@ -275,3 +275,61 @@ export const syncMissingPrices = async () => {
     throw error;
   }
 };
+
+// Sincronizar precios de todas las cartas
+export const syncAllPrices = async () => {
+  try {
+    const { rows: cards } = await query(
+      "SELECT id, name FROM cards ORDER BY id",
+    );
+    console.log(
+      `Iniciando sincronizacion de precios para ${cards.length} cartas...`,
+    );
+
+    let successCount = 0;
+    let skippedCount = 0;
+    let failCount = 0;
+
+    for (let i = 0; i < cards.length; i++) {
+      const card = cards[i];
+
+      try {
+        console.log(`\n Progreso: ${i + 1}/${cards.length} - ${card.name}`);
+
+        const result = await syncAggregatedPrice(card.id);
+
+        if (result) {
+          successCount++;
+        } else {
+          skippedCount++;
+        }
+
+        // Esperar 2.5 segundos entre cada carta
+        if (i < cards.length - 1) {
+          await sleep(2500);
+        }
+      } catch (error) {
+        failCount++;
+        console.error(`❌ Error en carta ${card.id}: ${error.message}`);
+        await sleep(3000);
+        continue;
+      }
+    }
+
+    console.log(`\n🎉 ===== SINCRONIZACIÓN DE PRECIOS COMPLETADA =====`);
+    console.log(`✅ Precios sincronizados: ${successCount}`);
+    console.log(`⚠️ Sin precio disponible: ${skippedCount}`);
+    console.log(`❌ Errores: ${failCount}`);
+
+    return {
+      success: true,
+      successCount,
+      skippedCount,
+      failCount,
+      total: cards.length,
+    };
+  } catch (error) {
+    console.error('Error en syncAllPrices:', error.message);
+    throw error;
+  }
+};
