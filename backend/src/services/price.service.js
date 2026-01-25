@@ -14,12 +14,18 @@ async function getTCGPlayerPrice(cardId) {
       headers: { "X-Api-Key": POKEMON_TCG_API_KEY },
     });
 
-    if (!response.ok) return null;
+    if (!response.ok) {
+      console.log(`    🔴 TCGPlayer: HTTP ${response.status} para ${cardId}`);
+      return null;
+    }
 
     const { data } = await response.json();
     const prices = data.tcgplayer?.prices;
 
-    if (!prices) return null;
+    if (!prices) {
+      console.log(`    ⚪ TCGPlayer: Sin datos de precio para ${cardId}`);
+      return null;
+    }
 
     const priceVariants = [
       prices.holofoil?.market,
@@ -41,21 +47,34 @@ async function getTCGPlayerPrice(cardId) {
 // Obtiene el precio de TCGdex (precios de Cardmarket en EUR)
 async function getTCGdexPrice(cardId) {
   try {
-    const response = await fetch(`${TCGDEX_API_URL}/cards/${cardId}`);
+    const url = `${TCGDEX_API_URL}/cards/${cardId}`;
+    const response = await fetch(url);
 
-    if (!response.ok) return null;
+    if (!response.ok) {
+      console.log(
+        `    🔴 TCGdex: HTTP ${response.status} para ${cardId} (${url})`,
+      );
+      return null;
+    }
 
     const card = await response.json();
 
     const cardMarketPrices = card.cardmarket;
 
-    if (!cardMarketPrices) return null;
+    if (!cardMarketPrices) {
+      console.log(`    ⚪ TCGdex: Sin datos de Cardmarket para ${cardId}`);
+      return null;
+    }
 
     const priceEur =
       cardMarketPrices.averageSellPrice ||
       cardMarketPrices.trendPrice ||
       cardMarketPrices.lowPrice ||
       null;
+
+    if (!priceEur) {
+      console.log(`    ⚪ TCGdex: Cardmarket sin precio válido para ${cardId}`);
+    }
 
     return priceEur ? { priceEur, source: "cardmarket_tcgdex" } : null;
   } catch (error) {
@@ -68,23 +87,37 @@ async function getTCGdexPrice(cardId) {
 async function getPriceChartingPrice(cardName, setName) {
   try {
     const searchQuery = encodeURIComponent(`${cardName} ${setName}`);
-    const response = await fetch(
-      `https://www.pricecharting.com/api/products?q=${searchQuery}&type=pokemon-card&t=${Date.now()}`,
-      {
-        headers: {
-          "User-Agent": "Mozilla/5.0 (compatible; PokePriceTracker/1.0)",
-        },
+    const url = `https://www.pricecharting.com/api/products?q=${searchQuery}&type=pokemon-card&t=${Date.now()}`;
+    const response = await fetch(url, {
+      headers: {
+        "User-Agent": "Mozilla/5.0 (compatible; PokePriceTracker/1.0)",
       },
-    );
+    });
 
-    if (!response.ok) return null;
+    if (!response.ok) {
+      console.log(
+        `    🔴 PriceCharting: HTTP ${response.status} para "${cardName}"`,
+      );
+      return null;
+    }
 
     const data = await response.json();
 
-    if (!data.products || data.products.length === 0) return null;
+    if (!data.products || data.products.length === 0) {
+      console.log(
+        `    ⚪ PriceCharting: Sin productos para "${cardName} ${setName}"`,
+      );
+      return null;
+    }
 
     const product = data.products[0];
     const priceUsd = product["loose-price"] || product["cib-price"];
+
+    if (!priceUsd) {
+      console.log(
+        `    ⚪ PriceCharting: Producto encontrado sin precio válido para "${cardName}"`,
+      );
+    }
 
     return priceUsd ? { priceUsd, source: "pricecharting" } : null;
   } catch (error) {
