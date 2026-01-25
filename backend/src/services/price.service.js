@@ -167,3 +167,43 @@ export const getAggregatedPrice = async (cardId, cardName, setName = "") => {
     throw error;
   }
 };
+
+// Sincroniza precio agregado y guarda en el historial
+export const syncAggregatedPrice = async (cardId) => {
+  try {
+    const { rows } = await query("SELECT name, set_id FROM cards WHERE id = $1", [cardId]);
+
+    if(rows.length === 0) {
+      throw new Error('Carta no encontrada en la DB');
+    }
+
+    const { name, set_id } = rows[0];
+
+    // Obtener nombre del set
+    const { rows: setRows } = await query(
+      "SELECT name FROM sets WHERE id = $1",[set_id]
+    )
+    const setName = setRows[0]?.name || "";
+
+    const priceData = await getAggregatedPrice(cardId, name, setName);
+
+    if(!priceData) {
+      console.log(`No se encontraron precios para ${name}`);
+      return null
+    }
+
+    // Guardar cada fuente en el historial
+    for (const source of priceData.sources) {
+      await query(
+        "INSERT INTO price_history (card_id, price_usd, price_eur, source) VALUES ($1, $2, $3, $4)", [cardId, source.priceUsd, source.priceEur.toFixed(2), source.source],
+      )
+    }
+
+    console.log(`✅ Precios actualizados para ${name}: €${priceData.averagePriceEur} / $${priceData.averagePriceUsd}`);
+    return priceData;
+  } catch (error) {
+    console.error('Error sincronizando precio agregado:', error.message);
+    throw error;
+  }
+}
+
