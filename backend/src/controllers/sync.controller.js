@@ -5,7 +5,7 @@ import {
   syncMissingSetsCards,
 } from "../services/pokemon.service.js";
 
-import { syncAllPrices, syncMissingPrices } from "../services/price.service.js";
+import { syncAllPrices, syncMissingPrices } from "../services/price/index.js";
 
 export const syncSets = async (req, res) => {
   try {
