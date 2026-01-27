@@ -1,42 +1,34 @@
 const POKEMON_TCG_API_URL = process.env.POKEMON_TCG_API_URL;
 const POKEMON_TCG_API_KEY = process.env.POKEMON_TCG_API_KEY;
 
-// TCGPlayer API (USD) - Precios de TCGPlayer vía Pokemon TCG API
-// La Pokemon TCG API incluye datos de precios de TCGPlayer y tiene mejor cobertura
+/**
+ * Obtiene el precio de mercado de TCGPlayer para una carta
+ * Usa la Pokemon TCG API que incluye precios de TCGPlayer
+ * @param {string} cardId - ID de la carta en formato Pokemon TCG API
+ * @returns {Object|null} - {priceUsd, source} o null si no hay precio
+ */
 export async function getTCGPlayerPrice(cardId) {
   try {
-    console.log(
-      `    🔄 [TCGPlayer] Consultando precios con ID: "${cardId}"...`,
-    );
+    console.log(`[TCGPlayer] Consultando precio para carta: ${cardId}`);
 
     if (!POKEMON_TCG_API_KEY) {
-      console.log(
-        `    🔴 [TCGPlayer] ERROR: POKEMON_TCG_API_KEY no está definida en .env`,
-      );
+      console.error("[TCGPlayer] ERROR: POKEMON_TCG_API_KEY no configurada");
       return null;
     }
 
     const url = `${POKEMON_TCG_API_URL}/cards/${cardId}`;
-    console.log(`    🌐 [TCGPlayer] URL: ${url}`);
-
-    const headers = {
-      "X-Api-Key": POKEMON_TCG_API_KEY,
-    };
-
+    const headers = { "X-Api-Key": POKEMON_TCG_API_KEY };
     const response = await fetch(url, { headers });
 
-    console.log(`    📡 [TCGPlayer] Status HTTP: ${response.status}`);
+    console.log(`[TCGPlayer] Status HTTP: ${response.status}`);
 
     if (!response.ok) {
       const errorText = await response.text();
-
       if (response.status === 404) {
-        console.log(
-          `    ⚪ [TCGPlayer] Carta no encontrada en Pokemon TCG API (ID: ${cardId})`,
-        );
+        console.log(`[TCGPlayer] Carta no encontrada (ID: ${cardId})`);
       } else {
-        console.log(
-          `    🔴 [TCGPlayer] Error HTTP ${response.status}: ${errorText.substring(0, 200)}`,
+        console.error(
+          `[TCGPlayer] Error HTTP ${response.status}: ${errorText.substring(0, 200)}`,
         );
       }
       return null;
@@ -46,33 +38,20 @@ export async function getTCGPlayerPrice(cardId) {
     const card = result.data;
 
     if (!card) {
-      console.log(`    ⚪ [TCGPlayer] Carta no encontrada en respuesta`);
+      console.log("[TCGPlayer] Carta no encontrada en respuesta");
       return null;
     }
 
-    console.log(`    📦 [TCGPlayer] Carta recibida: ${card.name}`);
-    console.log(
-      `    🔍 [TCGPlayer] Tiene datos de tcgplayer:`,
-      !!card.tcgplayer,
-    );
+    console.log(`[TCGPlayer] Carta recibida: ${card.name}`);
 
     if (!card.tcgplayer?.prices) {
-      console.log(
-        `    ⚪ [TCGPlayer] Sin datos de precio (campo tcgplayer.prices no existe)`,
-      );
+      console.log("[TCGPlayer] Sin datos de precio disponibles");
       return null;
     }
 
     const prices = card.tcgplayer.prices;
-    console.log(`    📋 [TCGPlayer] Tipos de precio disponibles:`, {
-      holofoil: !!prices.holofoil,
-      reverseHolofoil: !!prices.reverseHolofoil,
-      normal: !!prices.normal,
-      unlimitedHolofoil: !!prices.unlimitedHolofoil,
-      "1stEditionHolofoil": !!prices["1stEditionHolofoil"],
-    });
 
-    // Prioridad de variantes: holofoil > reverseHolofoil > normal > otros
+    // Priorizar variantes: holofoil > reverseHolofoil > normal > unlimitedHolofoil > 1stEditionHolofoil
     const priceVariants = [
       prices.holofoil?.market,
       prices.reverseHolofoil?.market,
@@ -84,12 +63,7 @@ export async function getTCGPlayerPrice(cardId) {
     const priceUsd = priceVariants.find((p) => p && p > 0);
 
     if (!priceUsd) {
-      console.log(`    ⚪ [TCGPlayer] Sin precio válido en ninguna variante`);
-      console.log(`    📋 [TCGPlayer] Variantes inspeccionadas:`, {
-        holofoil: prices.holofoil?.market,
-        reverseHolofoil: prices.reverseHolofoil?.market,
-        normal: prices.normal?.market,
-      });
+      console.log("[TCGPlayer] Sin precio válido en ninguna variante");
       return null;
     }
 
@@ -105,12 +79,11 @@ export async function getTCGPlayerPrice(cardId) {
       variantUsed = "1stEditionHolofoil";
 
     console.log(
-      `    ✅ [TCGPlayer] PRECIO ENCONTRADO: $${priceUsd} (variante: ${variantUsed})`,
+      `✓ [TCGPlayer] Precio encontrado: $${priceUsd} (${variantUsed})`,
     );
     return { priceUsd, source: "tcgplayer" };
   } catch (error) {
-    console.error(`    🔴 [TCGPlayer] Error en catch:`, error.message);
-    console.error(`    🔴 [TCGPlayer] Stack:`, error.stack);
+    console.error(`✗ [TCGPlayer] Error:`, error.message);
     return null;
   }
 }
