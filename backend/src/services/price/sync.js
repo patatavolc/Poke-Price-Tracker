@@ -1,10 +1,34 @@
+/**
+ * Servicio de sincronización de precios
+ *
+ * Este módulo maneja la sincronización masiva de precios desde múltiples fuentes.
+ * Coordina el proceso de consulta, agregación y almacenamiento de precios en la base de datos.
+ *
+ * Funcionalidades principales:
+ * - Sincronizar precio de una carta individual
+ * - Sincronizar todas las cartas sin precio (batch processing)
+ * - Sincronizar todas las cartas del sistema
+ * - Seguimiento de progreso y estadísticas
+ * - Manejo de errores y reintentos
+ */
+
 import { query } from "../../config/db.js";
 import { getAggregatedPrice } from "./aggregator.js";
 import { sleep } from "./utils.js";
 
-// Sincroniza precio agregado y guarda en el historial
+/**
+ * Sincroniza el precio agregado de una carta individual
+ *
+ * Obtiene los datos de la carta desde la base de datos, consulta los precios
+ * de múltiples fuentes, calcula el promedio y guarda el historial de precios.
+ *
+ * @param {string} cardId - ID de la carta a sincronizar
+ * @returns {Object|null} Objeto con los datos de precio agregado o null si no hay precios
+ * @throws {Error} Si la carta no existe en la base de datos o hay un error crítico
+ */
 export const syncAggregatedPrice = async (cardId) => {
   try {
+    // Obtener información básica de la carta desde la base de datos
     console.log(`\nObteniendo datos de carta ${cardId} desde DB...`);
     const { rows } = await query(
       "SELECT name, set_id FROM cards WHERE id = $1",
@@ -19,6 +43,7 @@ export const syncAggregatedPrice = async (cardId) => {
     const { name, set_id } = rows[0];
     console.log(`Carta encontrada: ${name} (Set ID: ${set_id})`);
 
+    // Obtener el nombre del set para mejor contexto en logs
     const { rows: setRows } = await query(
       "SELECT name FROM sets WHERE id = $1",
       [set_id],
@@ -33,6 +58,8 @@ export const syncAggregatedPrice = async (cardId) => {
       return null;
     }
 
+    // Guardar cada precio individual en el historial
+    // Se guarda un registro por cada fuente exitosa (TCGPlayer y/o Cardmarket)
     console.log(
       `\nGuardando ${priceData.sources.length} precios en la base de datos...`,
     );
@@ -46,7 +73,8 @@ export const syncAggregatedPrice = async (cardId) => {
       );
     }
 
-    // Mostrar estado de fuentes
+    // Mostrar qué fuentes fallaron (si hubo alguna)
+    // Esto ayuda a diagnosticar problemas con APIs específicas
     if (priceData.sourcesStatus) {
       const failed = Object.entries(priceData.sourcesStatus)
         .filter(([_, status]) => !status.success)
@@ -66,15 +94,32 @@ export const syncAggregatedPrice = async (cardId) => {
   }
 };
 
-// Sincronizar precios solo de cartas sin precio
+/**
+ * Sincroniza precios de cartas que no tienen precio en la base de datos
+ *
+ * Esta función es ideal para completar el catálogo de precios sin procesar
+ * cartas que ya tienen precios actualizados. Útil para sincronizaciones incrementales.
+ *
+ * @param {number|null} dailyLimit - Límite opcional de cartas a procesar (null = sin límite)
+ * @returns {Object} Estadísticas de la sincronización:
+ *   - success: true si completó sin errores críticos
+ *   - successCount: Número de cartas con precio sincronizado correctamente
+ *   - skippedCount: Número de cartas sin precio disponible en ninguna fuente
+ *   - failCount: Número de cartas que generaron error
+ *   - total: Total de cartas procesadas
+ *
+ * Incluye delays entre peticiones para evitar sobrecarga de las APIs.
+ */
 export const syncMissingPrices = async (dailyLimit = null) => {
   try {
+    // Buscar todas las cartas que no tienen precio (last_price_usd o last_price_eur es NULL)
     console.log("\nBuscando cartas sin precio en la base de datos...");
 
     let queryStr =
       "SELECT id, name FROM cards WHERE last_price_usd IS NULL OR last_price_eur IS NULL ORDER BY id";
     const queryParams = [];
 
+    // Aplicar límite si se especificó (útil para procesamiento gradual)
     if (dailyLimit !== null) {
       queryStr += " LIMIT $1";
       queryParams.push(dailyLimit);
@@ -96,9 +141,10 @@ export const syncMissingPrices = async (dailyLimit = null) => {
       `Tiempo estimado: ~${Math.ceil((cards.length * 2.5) / 60)} minutos\n`,
     );
 
-    let successCount = 0;
-    let skippedCount = 0;
-    let failCount = 0;
+    // Contadores para estadísticas finales
+    let successCount = 0; // Cartas con precio obtenido exitosamente
+    let skippedCount = 0; // Cartas sin precio disponible en ninguna fuente
+    let failCount = 0; // Cartas que generaron error durante el proceso
     const startTime = Date.now();
 
     for (let i = 0; i < cards.length; i++) {
@@ -124,20 +170,25 @@ export const syncMissingPrices = async (dailyLimit = null) => {
           console.log(`\n⚠ Omitida - Total omitidas: ${skippedCount}`);
         }
 
+        // Delay entre peticiones para no sobrecargar las APIs
+        // 2.5 segundos es un balance entre velocidad y respeto a los rate limits
         if (i < cards.length - 1) {
           console.log(`\nEsperando 2.5s antes de la siguiente carta...`);
           await sleep(2500);
         }
       } catch (error) {
+        // Incrementar contador de errores pero continuar con la siguiente carta
         failCount++;
         console.error(`\n❌ ERROR - Carta ${card.id}: ${error.message}`);
         console.error(`❌ Total errores: ${failCount}`);
+        // Delay más largo después de un error para permitir recuperación
         console.log(`\nEsperando 3s antes de continuar...`);
         await sleep(3000);
         continue;
       }
     }
 
+    // Calcular estadísticas finales para el reporte
     const endTime = Date.now();
     const totalTime = Math.floor((endTime - startTime) / 1000);
     const successRate = ((successCount / cards.length) * 100).toFixed(1);
@@ -173,7 +224,22 @@ export const syncMissingPrices = async (dailyLimit = null) => {
   }
 };
 
-// Sincronizar precios de todas las cartas
+/**
+ * Sincroniza precios de TODAS las cartas en la base de datos
+ *
+ * Esta función procesa todas las cartas sin excepción, incluyendo aquellas que
+ * ya tienen precio. Útil para actualización completa del catálogo.
+ *
+ * ADVERTENCIA: Esta operación puede tardar varias horas dependiendo del número
+ * de cartas en la base de datos.
+ *
+ * @returns {Object} Estadísticas de la sincronización:
+ *   - success: true si completó sin errores críticos
+ *   - successCount: Número de cartas actualizadas correctamente
+ *   - skippedCount: Número de cartas sin precio disponible
+ *   - failCount: Número de cartas que generaron error
+ *   - total: Total de cartas procesadas
+ */
 export const syncAllPrices = async () => {
   try {
     const { rows: cards } = await query(

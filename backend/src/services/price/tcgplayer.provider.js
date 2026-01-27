@@ -1,11 +1,24 @@
+// URL base de la Pokemon TCG API (pokemontcg.io/v2) que incluye precios de TCGPlayer
 const POKEMON_TCG_API_URL = process.env.POKEMON_TCG_API_URL;
+// API key requerida para acceso ilimitado (sin límite de peticiones)
 const POKEMON_TCG_API_KEY = process.env.POKEMON_TCG_API_KEY;
 
 /**
- * Obtiene el precio de mercado de TCGPlayer para una carta
- * Usa la Pokemon TCG API que incluye precios de TCGPlayer
- * @param {string} cardId - ID de la carta en formato Pokemon TCG API
- * @returns {Object|null} - {priceUsd, source} o null si no hay precio
+ * Obtiene el precio de mercado de TCGPlayer para una carta específica
+ *
+ * Usa la Pokemon TCG API oficial (pokemontcg.io) que incluye datos de precios de TCGPlayer.
+ * Los precios se devuelven en dólares estadounidenses (USD).
+ * Esta API requiere autenticación mediante API key pero no tiene límite de peticiones.
+ *
+ * @param {string} cardId - ID de la carta en formato Pokemon TCG API (ej: "base1-4")
+ * @returns {Object|null} Objeto con {priceUsd, source: "tcgplayer"} o null si no hay precio disponible
+ *
+ * Prioridad de variantes de carta:
+ * 1. holofoil - Carta holográfica (más común)
+ * 2. reverseHolofoil - Holográfica reversa
+ * 3. normal - Versión normal/common
+ * 4. unlimitedHolofoil - Holográfica edición ilimitada
+ * 5. 1stEditionHolofoil - Holográfica primera edición
  */
 export async function getTCGPlayerPrice(cardId) {
   try {
@@ -17,6 +30,7 @@ export async function getTCGPlayerPrice(cardId) {
     }
 
     const url = `${POKEMON_TCG_API_URL}/cards/${cardId}`;
+    // Autenticación mediante API key en el header X-Api-Key
     const headers = { "X-Api-Key": POKEMON_TCG_API_KEY };
     const response = await fetch(url, { headers });
 
@@ -35,6 +49,7 @@ export async function getTCGPlayerPrice(cardId) {
     }
 
     const result = await response.json();
+    // La API devuelve los datos de la carta en result.data
     const card = result.data;
 
     if (!card) {
@@ -51,7 +66,8 @@ export async function getTCGPlayerPrice(cardId) {
 
     const prices = card.tcgplayer.prices;
 
-    // Priorizar variantes: holofoil > reverseHolofoil > normal > unlimitedHolofoil > 1stEditionHolofoil
+    // Crear array de precios ordenado por prioridad
+    // Usamos .find() luego para obtener el primer precio válido (> 0)
     const priceVariants = [
       prices.holofoil?.market,
       prices.reverseHolofoil?.market,
@@ -60,6 +76,7 @@ export async function getTCGPlayerPrice(cardId) {
       prices["1stEditionHolofoil"]?.market,
     ];
 
+    // Obtener el primer precio válido (no null y mayor que 0)
     const priceUsd = priceVariants.find((p) => p && p > 0);
 
     if (!priceUsd) {
@@ -67,7 +84,8 @@ export async function getTCGPlayerPrice(cardId) {
       return null;
     }
 
-    // Determinar qué variante se usó
+    // Determinar qué variante se usó para logging y debugging
+    // Esto ayuda a entender qué tipo de carta se está valorando
     let variantUsed = "unknown";
     if (prices.holofoil?.market === priceUsd) variantUsed = "holofoil";
     else if (prices.reverseHolofoil?.market === priceUsd)
