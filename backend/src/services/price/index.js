@@ -2,7 +2,7 @@
 // Re-exporta todas las funciones públicas de los submódulos
 
 // Providers
-export { getJustTCGPrice } from "./justtcg.provider.js";
+export { getTCGPlayerPrice } from "./tcgplayer.provider.js";
 export { getCardmarketPrice } from "./cardmarket.provider.js";
 
 // Aggregator

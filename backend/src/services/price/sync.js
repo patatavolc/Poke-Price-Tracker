@@ -46,8 +46,18 @@ export const syncAggregatedPrice = async (cardId) => {
       );
     }
 
+    // Mostrar estado de fuentes
+    if (priceData.sourcesStatus) {
+      const failed = Object.entries(priceData.sourcesStatus)
+        .filter(([_, status]) => !status.success)
+        .map(([name, _]) => name);
+      if (failed.length > 0) {
+        console.log(`\n⚠️ Fuentes sin precio: ${failed.join(', ')}`);
+      }
+    }
+
     console.log(
-      `\n✅ COMPLETADO - ${name}: €${priceData.averagePriceEur} / $${priceData.averagePriceUsd} (${priceData.sources.length} fuentes)`,
+      `\n✅ COMPLETADO - ${name}: €${priceData.averagePriceEur} / $${priceData.averagePriceUsd} (${priceData.sources.length}/2 fuentes)`,
     );
     return priceData;
   } catch (error) {
@@ -57,13 +67,20 @@ export const syncAggregatedPrice = async (cardId) => {
 };
 
 // Sincronizar precios solo de cartas sin precio
-export const syncMissingPrices = async (dailyLimit = 80) => {
+export const syncMissingPrices = async (dailyLimit = null) => {
   try {
     console.log("\n🔍 Buscando cartas sin precio en la base de datos...");
-    const { rows: cards } = await query(
-      "SELECT id, name FROM cards WHERE last_price_usd IS NULL OR last_price_eur IS NULL ORDER BY id LIMIT $1",
-      [dailyLimit],
-    );
+
+    let queryStr =
+      "SELECT id, name FROM cards WHERE last_price_usd IS NULL OR last_price_eur IS NULL ORDER BY id";
+    const queryParams = [];
+
+    if (dailyLimit !== null) {
+      queryStr += " LIMIT $1";
+      queryParams.push(dailyLimit);
+    }
+
+    const { rows: cards } = await query(queryStr, queryParams);
 
     if (cards.length === 0) {
       console.log("✅ Todas las cartas tienen precios sincronizados");
@@ -71,9 +88,9 @@ export const syncMissingPrices = async (dailyLimit = 80) => {
     }
 
     console.log(`🔍 Encontradas ${cards.length} cartas sin precio`);
-    console.log(
-      `⚙️  LÍMITE DIARIO: Procesando máximo ${dailyLimit} cartas (Plan Free JustTCG: 100 req/día)`,
-    );
+    if (dailyLimit) {
+      console.log(`⚙️  LÍMITE: Procesando máximo ${dailyLimit} cartas`);
+    }
     console.log("🚀 Iniciando sincronización de precios faltantes...");
     console.log(
       `⏱️  Tiempo estimado: ~${Math.ceil((cards.length * 2.5) / 60)} minutos\n`,
