@@ -15,13 +15,13 @@ export const syncPriceByCardId = async (cardId, retries = 3) => {
     });
 
     if (response.status === 504 && retries > 0) {
-      console.log(`⏳ Timeout obteniendo precio de ${cardId}, reintentando...`);
+      console.log(`Timeout obteniendo precio de ${cardId}, reintentando...`);
       await sleep(3000);
       return syncPriceByCardId(cardId, retries - 1);
     }
 
     if (!response.ok) {
-      console.log(`⚠️ Error API para ${cardId}: ${response.status}`);
+      console.log(`⚠ Error API para ${cardId}: ${response.status}`);
       return null;
     }
 
@@ -41,7 +41,7 @@ export const syncPriceByCardId = async (cardId, retries = 3) => {
     const priceUsd = priceVariants.find((p) => p && p > 0);
 
     if (!priceUsd) {
-      console.log(`💵 No se encontró precio para ${cardId}`);
+      console.log(`No se encontró precio para ${cardId}`);
       return null;
     }
 
@@ -53,9 +53,7 @@ export const syncPriceByCardId = async (cardId, retries = 3) => {
       [cardId, priceUsd, priceEur.toFixed(2), "tcgplayer"],
     );
 
-    console.log(
-      `💰 Precio actualizado: $${priceUsd} / €${priceEur.toFixed(2)}`,
-    );
+    console.log(`Precio actualizado: $${priceUsd} / €${priceEur.toFixed(2)}`);
     return { priceUsd, priceEur };
   } catch (error) {
     console.error(`Error en syncPriceByCardId (${cardId}):`, error.message);
@@ -70,13 +68,13 @@ export const getAggregatedPrice = async (cardId, cardName, setName = "") => {
     const usdToEurRate = 1 / eurToUsdRate;
 
     console.log(`\n${"=".repeat(80)}`);
-    console.log(`💰 CONSULTANDO PRECIOS PARA: ${cardName}`);
-    console.log(`🆔 Card ID: ${cardId}`);
-    console.log(`📦 Set: ${setName || "N/A"}`);
-    console.log(`💱 Tasa de cambio EUR→USD: ${eurToUsdRate.toFixed(4)}`);
+    console.log(`CONSULTANDO PRECIOS PARA: ${cardName}`);
+    console.log(`Card ID: ${cardId}`);
+    console.log(`Set: ${setName || "N/A"}`);
+    console.log(`Tasa de cambio EUR→USD: ${eurToUsdRate.toFixed(4)}`);
     console.log(`${"=".repeat(80)}`);
 
-    console.log(`\n🔍 PASO 1: Consultar APIs de precios en paralelo...`);
+    console.log(`\nPASO 1: Consultar APIs de precios en paralelo...`);
 
     // Objeto para rastrear el estado de cada fuente
     const sourcesStatus = {
@@ -91,7 +89,7 @@ export const getAggregatedPrice = async (cardId, cardName, setName = "") => {
       getCardmarketPrice(cardId),
     ]);
 
-    console.log(`\n📊 PASO 2: Procesar resultados...`);
+    console.log(`\nPASO 2: Procesar resultados...`);
     const validPrices = [];
 
     // Procesar TCGPlayer
@@ -105,11 +103,11 @@ export const getAggregatedPrice = async (cardId, cardName, setName = "") => {
       sourcesStatus.tcgplayer.success = true;
       sourcesStatus.tcgplayer.price = priceData;
       console.log(
-        `✅ [ÉXITO] TCGPlayer: $${priceData.priceUsd} / €${priceData.priceEur.toFixed(2)}`,
+        `✅ TCGPlayer: $${priceData.priceUsd} / €${priceData.priceEur.toFixed(2)}`,
       );
     } else {
       sourcesStatus.tcgplayer.error = "Sin datos de precio disponibles";
-      console.log(`❌ [FALLO] TCGPlayer: No disponible - Sin datos de precio`);
+      console.log(`❌ TCGPlayer: No disponible`);
     }
 
     // Procesar Cardmarket
@@ -123,11 +121,11 @@ export const getAggregatedPrice = async (cardId, cardName, setName = "") => {
       sourcesStatus.cardmarket.success = true;
       sourcesStatus.cardmarket.price = priceData;
       console.log(
-        `✅ [ÉXITO] Cardmarket: €${priceData.priceEur} / $${priceData.priceUsd.toFixed(2)}`,
+        `✅ Cardmarket: €${priceData.priceEur} / $${priceData.priceUsd.toFixed(2)}`,
       );
     } else {
       sourcesStatus.cardmarket.error = "Sin datos de precio disponibles";
-      console.log(`❌ [FALLO] Cardmarket: No disponible - Sin datos de precio`);
+      console.log(`❌ Cardmarket: No disponible`);
     }
 
     // Resumen de fuentes
@@ -138,18 +136,18 @@ export const getAggregatedPrice = async (cardId, cardName, setName = "") => {
       (s) => !s.success,
     ).length;
 
-    console.log(`\n📊 RESUMEN DE FUENTES:`);
+    console.log(`\nRESUMEN DE FUENTES:`);
     console.log(`  ✅ Exitosas: ${successCount}/2`);
     console.log(`  ❌ Fallidas: ${failedCount}/2`);
     if (failedCount > 0) {
       const failed = Object.entries(sourcesStatus)
         .filter(([_, status]) => !status.success)
         .map(([name, _]) => name);
-      console.log(`  🔴 Fuentes fallidas: ${failed.join(", ")}`);
+      console.log(`  Fuentes fallidas: ${failed.join(", ")}`);
     }
 
     if (validPrices.length === 0) {
-      console.log(`\n⚠️ ❌ SIN PRECIOS DISPONIBLES DE NINGUNA FUENTE`);
+      console.log(`\n⚠ SIN PRECIOS DISPONIBLES DE NINGUNA FUENTE`);
       console.log(`${"=".repeat(80)}\n`);
       return null;
     }
@@ -161,11 +159,11 @@ export const getAggregatedPrice = async (cardId, cardName, setName = "") => {
       validPrices.reduce((sum, p) => sum + p.priceUsd, 0) / validPrices.length;
 
     console.log(`\n${"=".repeat(80)}`);
-    console.log(`📊 RESULTADO FINAL:`);
-    console.log(`  💶 Precio promedio EUR: €${avgEur.toFixed(2)}`);
-    console.log(`  💵 Precio promedio USD: $${avgUsd.toFixed(2)}`);
-    console.log(`  📈 Fuentes exitosas: ${validPrices.length}/2`);
-    console.log(`  📋 Fuentes: ${validPrices.map((p) => p.source).join(", ")}`);
+    console.log(`RESULTADO FINAL:`);
+    console.log(`  Precio promedio EUR: €${avgEur.toFixed(2)}`);
+    console.log(`  Precio promedio USD: $${avgUsd.toFixed(2)}`);
+    console.log(`  Fuentes exitosas: ${validPrices.length}/2`);
+    console.log(`  Fuentes: ${validPrices.map((p) => p.source).join(", ")}`);
     console.log(`${"=".repeat(80)}\n`);
 
     return {

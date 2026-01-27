@@ -79,11 +79,11 @@ export async function getTCGPlayerPrice(cardId) {
       variantUsed = "1stEditionHolofoil";
 
     console.log(
-      `✓ [TCGPlayer] Precio encontrado: $${priceUsd} (${variantUsed})`,
+      `✅ [TCGPlayer] Precio encontrado: $${priceUsd} (${variantUsed})`,
     );
     return { priceUsd, source: "tcgplayer" };
   } catch (error) {
-    console.error(`✗ [TCGPlayer] Error:`, error.message);
+    console.error(`❌ [TCGPlayer] Error:`, error.message);
     return null;
   }
 }

@@ -5,7 +5,7 @@ import { sleep } from "./utils.js";
 // Sincroniza precio agregado y guarda en el historial
 export const syncAggregatedPrice = async (cardId) => {
   try {
-    console.log(`\n🔍 Obteniendo datos de carta ${cardId} desde DB...`);
+    console.log(`\nObteniendo datos de carta ${cardId} desde DB...`);
     const { rows } = await query(
       "SELECT name, set_id FROM cards WHERE id = $1",
       [cardId],
@@ -17,14 +17,14 @@ export const syncAggregatedPrice = async (cardId) => {
     }
 
     const { name, set_id } = rows[0];
-    console.log(`📝 Carta encontrada: ${name} (Set ID: ${set_id})`);
+    console.log(`Carta encontrada: ${name} (Set ID: ${set_id})`);
 
     const { rows: setRows } = await query(
       "SELECT name FROM sets WHERE id = $1",
       [set_id],
     );
     const setName = setRows[0]?.name || "";
-    console.log(`📦 Set: ${setName || "Sin nombre de set"}`);
+    console.log(`Set: ${setName || "Sin nombre de set"}`);
 
     const priceData = await getAggregatedPrice(cardId, name, setName);
 
@@ -34,7 +34,7 @@ export const syncAggregatedPrice = async (cardId) => {
     }
 
     console.log(
-      `\n💾 Guardando ${priceData.sources.length} precios en la base de datos...`,
+      `\nGuardando ${priceData.sources.length} precios en la base de datos...`,
     );
     for (const source of priceData.sources) {
       await query(
@@ -52,7 +52,7 @@ export const syncAggregatedPrice = async (cardId) => {
         .filter(([_, status]) => !status.success)
         .map(([name, _]) => name);
       if (failed.length > 0) {
-        console.log(`\n⚠️ Fuentes sin precio: ${failed.join(', ')}`);
+        console.log(`\n⚠ Fuentes sin precio: ${failed.join(", ")}`);
       }
     }
 
@@ -69,7 +69,7 @@ export const syncAggregatedPrice = async (cardId) => {
 // Sincronizar precios solo de cartas sin precio
 export const syncMissingPrices = async (dailyLimit = null) => {
   try {
-    console.log("\n🔍 Buscando cartas sin precio en la base de datos...");
+    console.log("\nBuscando cartas sin precio en la base de datos...");
 
     let queryStr =
       "SELECT id, name FROM cards WHERE last_price_usd IS NULL OR last_price_eur IS NULL ORDER BY id";
@@ -87,13 +87,13 @@ export const syncMissingPrices = async (dailyLimit = null) => {
       return { success: true, total: 0 };
     }
 
-    console.log(`🔍 Encontradas ${cards.length} cartas sin precio`);
+    console.log(`Encontradas ${cards.length} cartas sin precio`);
     if (dailyLimit) {
-      console.log(`⚙️  LÍMITE: Procesando máximo ${dailyLimit} cartas`);
+      console.log(`LÍMITE: Procesando máximo ${dailyLimit} cartas`);
     }
-    console.log("🚀 Iniciando sincronización de precios faltantes...");
+    console.log("Iniciando sincronización de precios faltantes...");
     console.log(
-      `⏱️  Tiempo estimado: ~${Math.ceil((cards.length * 2.5) / 60)} minutos\n`,
+      `Tiempo estimado: ~${Math.ceil((cards.length * 2.5) / 60)} minutos\n`,
     );
 
     let successCount = 0;
@@ -107,11 +107,11 @@ export const syncMissingPrices = async (dailyLimit = null) => {
       try {
         console.log(`\n${"=".repeat(80)}`);
         console.log(
-          `📊 Progreso: ${i + 1}/${cards.length} (${(((i + 1) / cards.length) * 100).toFixed(1)}%)`,
+          `Progreso: ${i + 1}/${cards.length} (${(((i + 1) / cards.length) * 100).toFixed(1)}%)`,
         );
-        console.log(`📇 Carta: ${card.name} (ID: ${card.id})`);
+        console.log(`Carta: ${card.name} (ID: ${card.id})`);
         console.log(
-          `⏱️  Tiempo transcurrido: ${Math.floor((Date.now() - startTime) / 1000)}s`,
+          `Tiempo transcurrido: ${Math.floor((Date.now() - startTime) / 1000)}s`,
         );
 
         const result = await syncAggregatedPrice(card.id);
@@ -121,18 +121,18 @@ export const syncMissingPrices = async (dailyLimit = null) => {
           console.log(`\n✅ Éxito - Total exitosas: ${successCount}`);
         } else {
           skippedCount++;
-          console.log(`\n⚠️  Omitida - Total omitidas: ${skippedCount}`);
+          console.log(`\n⚠ Omitida - Total omitidas: ${skippedCount}`);
         }
 
         if (i < cards.length - 1) {
-          console.log(`\n⏳ Esperando 2.5s antes de la siguiente carta...`);
+          console.log(`\nEsperando 2.5s antes de la siguiente carta...`);
           await sleep(2500);
         }
       } catch (error) {
         failCount++;
         console.error(`\n❌ ERROR - Carta ${card.id}: ${error.message}`);
         console.error(`❌ Total errores: ${failCount}`);
-        console.log(`\n⏳ Esperando 3s antes de continuar...`);
+        console.log(`\nEsperando 3s antes de continuar...`);
         await sleep(3000);
         continue;
       }
@@ -143,17 +143,15 @@ export const syncMissingPrices = async (dailyLimit = null) => {
     const successRate = ((successCount / cards.length) * 100).toFixed(1);
 
     console.log(`\n${"=".repeat(80)}`);
-    console.log(
-      `\n🎉 ===== SINCRONIZACIÓN DE PRECIOS FALTANTES COMPLETADA =====`,
-    );
-    console.log(`\n📊 ESTADÍSTICAS:`);
+    console.log(`\nSINCRONIZACIÓN DE PRECIOS FALTANTES COMPLETADA`);
+    console.log(`\nESTADÍSTICAS:`);
     console.log(
       `   ✅ Precios sincronizados: ${successCount} (${successRate}%)`,
     );
-    console.log(`   ⚠️  Sin precio disponible: ${skippedCount}`);
+    console.log(`   ⚠ Sin precio disponible: ${skippedCount}`);
     console.log(`   ❌ Errores: ${failCount}`);
-    console.log(`   📝 Total procesadas: ${cards.length}`);
-    console.log(`\n⏱️  TIEMPO:`);
+    console.log(`   Total procesadas: ${cards.length}`);
+    console.log(`\nTIEMPO:`);
     console.log(
       `   Duración total: ${Math.floor(totalTime / 60)}m ${totalTime % 60}s`,
     );
@@ -182,7 +180,7 @@ export const syncAllPrices = async () => {
       "SELECT id, name FROM cards ORDER BY id",
     );
     console.log(
-      `🚀 Iniciando sincronización de precios para ${cards.length} cartas...`,
+      `Iniciando sincronización de precios para ${cards.length} cartas...`,
     );
 
     let successCount = 0;
@@ -193,7 +191,7 @@ export const syncAllPrices = async () => {
       const card = cards[i];
 
       try {
-        console.log(`\n📊 Progreso: ${i + 1}/${cards.length} - ${card.name}`);
+        console.log(`\nProgreso: ${i + 1}/${cards.length} - ${card.name}`);
 
         const result = await syncAggregatedPrice(card.id);
 
@@ -214,9 +212,9 @@ export const syncAllPrices = async () => {
       }
     }
 
-    console.log(`\n🎉 ===== SINCRONIZACIÓN DE PRECIOS COMPLETADA =====`);
+    console.log(`\nSINCRONIZACIÓN DE PRECIOS COMPLETADA`);
     console.log(`✅ Precios sincronizados: ${successCount}`);
-    console.log(`⚠️ Sin precio disponible: ${skippedCount}`);
+    console.log(`⚠ Sin precio disponible: ${skippedCount}`);
     console.log(`❌ Errores: ${failCount}`);
 
     return {
