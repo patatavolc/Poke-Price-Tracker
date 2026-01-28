@@ -18,3 +18,16 @@ export const getCardByIdWithHistory = async (id) => {
     history: historyRes.rows,
   };
 };
+
+export const getCardPriceService = async (id) => {
+  const queryText =
+    "SELECT id, name, last_price_eur, last_price_usd FROM cards WHERE id = $1";
+
+  const res = await query(queryText, [id]);
+
+  if (res.rows === 0) {
+    return null;
+  }
+
+  return res.rows[0];
+};
