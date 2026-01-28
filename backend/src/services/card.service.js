@@ -40,3 +40,44 @@ export const getCardsFromSetService = async (set_id) => {
 
   return res.rows;
 };
+
+// Cartas con mayor subida de precio
+export const getTrendingPriceIncreaseService = async (period = "24h") => {
+  const timeCondition =
+    period === "7d" ? "NOW() - INTERVAL '7 days'" : "NOW() - INTERVAL '1 day'";
+
+  // WITH crea una tabla temporal
+  const queryText = `
+  WITH price_changes AS (
+      SELECT 
+        c.id,
+        c.name,
+        c.image_small,
+        c.last_price_eur,
+        c.last_price_usd,
+        ph_old.price_eur as old_price_eur, -- precio antiguo
+        ph_old.price_usd as old_price_usd,
+        ((c.last_price_eur - ph_old.price_eur) / NULLIF(ph_old.price_eur, 0) * 100) as change_percentage_eur
+      FROM cards c
+      INNER JOIN LATERAL (
+        SELECT price_eur, price_usd
+        FROM price_history
+        WHERE card_id = c.id 
+          AND created_at <= ${timeCondition} -- condición de tiempo
+        ORDER BY created_at DESC
+        LIMIT 1
+      ) ph_old ON true
+      WHERE c.last_price_eur IS NOT NULL 
+        AND ph_old.price_eur IS NOT NULL
+        AND ph_old.price_eur > 0
+    )
+    SELECT * FROM price_changes
+    WHERE change_percentage_eur > 0
+    ORDER BY change_percentage_eur DESC
+    LIMIT 20
+  `;
+  // LATERAL permite que las subconsulta use c.id
+
+  const res = await query(queryText);
+  return res.rows;
+};
