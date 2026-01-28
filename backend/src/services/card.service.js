@@ -31,3 +31,12 @@ export const getCardPriceService = async (id) => {
 
   return res.rows[0];
 };
+
+export const getCardsFromSetService = async (set_id) => {
+  const queryText =
+    "SELECT id, name, last_price_eur, last_price_use FROM cards WHERE set_id = $1";
+
+  const res = await query(queryText, [set_id]);
+
+  return res.rows;
+};

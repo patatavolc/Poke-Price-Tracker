@@ -33,3 +33,14 @@ export const getCardPrice = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
+
+export const getCardsFromSet = async (req, res) => {
+  const { set_id } = req.params;
+  try {
+    const cards = await getCardsFromSetService(set_id);
+
+    res.json(cards);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
