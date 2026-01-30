@@ -139,3 +139,28 @@ export async function removeCardWithoutPrice(cardId) {
     console.error(`Error removiendo carta sin precio:`, error.message);
   }
 }
+
+/**
+ * Obtiene estadísticas de cartas sin precio
+ *
+ * @returns {Object} Estadísticas generales
+ */
+export async function getWithoutPriceStats() {
+  try {
+    const queryText = `
+      SELECT
+        COUNT(*) as total_cards,
+        COUNT(CASE WHEN attempt_count = 1 THEN 1 END) as first_attempt,
+        COUNT(CASE WHEN attempt_count BETWEEN 2 AND 5 THEN 1 END) as few_attempts,
+        COUNT(CASE WHEN attempt_count > 5 THEN 1 END) as many_attempts,
+        AVG(attempt_count)::NUMERIC(10,2) as avg_attempts
+      FROM cards_without_price
+    `;
+
+    const result = await query(queryText);
+    return result.rows[0];
+  } catch (error) {
+    console.error(`Error obteniendo estadísticas:`, error.message);
+    return null;
+  }
+}
