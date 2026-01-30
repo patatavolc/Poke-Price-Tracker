@@ -1,66 +1,139 @@
 import { query } from "../config/db.js";
 import { getExchangeRate } from "./currency.service.js";
+import {
+  markCardWithoutPrice,
+  removeCardWithoutPrice,
+} from "./price/cardsWithoutPrice.service.js";
 
 const POKEMON_TCG_API_URL = process.env.POKEMON_TCG_API_URL;
 const CARDMARKET_API_URL = process.env.CARDMARKET_API_URL;
 
-// Obtiene precios de multiples fuentes y calcula la media
-export const getAggregatedPrice = async (cardId, cardName, localId) => {
+export const getAggregatedPrice = async (cardId, cardName, setName = "") => {
   try {
-    const usdToEurRate = 1 / (await getExchangeRate());
+    const eurToUsdRate = await getExchangeRate();
+    const usdToEurRate = 1 / eurToUsdRate;
 
-    // Consultar precios de diferentes fuentes en paralelo
-    const [tcgPrice, cardmarketPrice] = await Promise.all([
-      getTCGPlayerPrice(cardName, localId),
+    console.log(`\n${"=".repeat(80)}`);
+    console.log(`CONSULTANDO PRECIOS PARA: ${cardName}`);
+    console.log(`Card ID: ${cardId}`);
+    console.log(`Set: ${setName || "N/A"}`);
+    console.log(`Tasa de cambio EUR→USD: ${eurToUsdRate.toFixed(4)}`);
+    console.log(`${"=".repeat(80)}`);
+
+    console.log(`\nPASO 1: Consultar APIs de precios en paralelo...`);
+
+    const sourcesStatus = {
+      tcgplayer: { attempted: true, success: false, price: null, error: null },
+      cardmarket: { attempted: true, success: false, price: null, error: null },
+    };
+
+    const [tcgplayerPrice, cardmarketPrice] = await Promise.all([
+      getTCGPlayerPrice(cardId),
       getCardmarketPrice(cardId),
     ]);
 
+    console.log(`\nPASO 2: Procesar resultados...`);
     const validPrices = [];
 
-    if (tcgPrice) {
-      validPrices.push({
-        source: "tcgplayer",
-        priceUsd: tcgPrice,
-        priceEur: tcgPrice * usdToEurRate,
-      });
+    if (tcgplayerPrice) {
+      const priceData = {
+        source: tcgplayerPrice.source,
+        priceUsd: tcgplayerPrice.priceUsd,
+        priceEur: tcgplayerPrice.priceUsd * usdToEurRate,
+      };
+      validPrices.push(priceData);
+      sourcesStatus.tcgplayer.success = true;
+      sourcesStatus.tcgplayer.price = priceData;
+      console.log(
+        `✅ TCGPlayer: $${priceData.priceUsd} / €${priceData.priceEur.toFixed(2)}`,
+      );
+    } else {
+      sourcesStatus.tcgplayer.error = "Sin datos de precio disponibles";
+      console.log(`❌ TCGPlayer: No disponible`);
     }
 
     if (cardmarketPrice) {
-      validPrices.push({
-        source: "cardmarket",
-        priceEur: cardmarketPrice,
-        priceUsd: cardmarketPrice / usdToEurRate,
-      });
+      const priceData = {
+        source: cardmarketPrice.source,
+        priceEur: cardmarketPrice.priceEur,
+        priceUsd: cardmarketPrice.priceEur * eurToUsdRate,
+      };
+      validPrices.push(priceData);
+      sourcesStatus.cardmarket.success = true;
+      sourcesStatus.cardmarket.price = priceData;
+      console.log(
+        `✅ Cardmarket: €${priceData.priceEur} / $${priceData.priceUsd.toFixed(2)}`,
+      );
+    } else {
+      sourcesStatus.cardmarket.error = "Sin datos de precio disponibles";
+      console.log(`❌ Cardmarket: No disponible`);
     }
 
+    const successCount = Object.values(sourcesStatus).filter(
+      (s) => s.success,
+    ).length;
+    const failedCount = Object.values(sourcesStatus).filter(
+      (s) => !s.success,
+    ).length;
+
+    console.log(`\nRESUMEN DE FUENTES:`);
+    console.log(`  ✅ Exitosas: ${successCount}/2`);
+    console.log(`  ❌ Fallidas: ${failedCount}/2`);
+
     if (validPrices.length === 0) {
+      console.log(`\n⚠ SIN PRECIOS DISPONIBLES DE NINGUNA FUENTE`);
+
+      // Marcar carta como sin precio
+      await markCardWithoutPrice(
+        cardId,
+        "Sin precios disponibles en ninguna fuente",
+        sourcesStatus,
+      );
+
+      console.log(`${"=".repeat(80)}\n`);
       return null;
     }
 
-    // Calcular la media
+    // Si se obtiene precio, remover de lista sin precio
+    await removeCardWithoutPrice(cardId);
+
     const avgEur =
       validPrices.reduce((sum, p) => sum + p.priceEur, 0) / validPrices.length;
 
     const avgUsd =
       validPrices.reduce((sum, p) => sum + p.priceUsd, 0) / validPrices.length;
 
+    console.log(`\n${"=".repeat(80)}`);
+    console.log(`RESULTADO FINAL:`);
+    console.log(`  Precio promedio EUR: €${avgEur.toFixed(2)}`);
+    console.log(`  Precio promedio USD: $${avgUsd.toFixed(2)}`);
+    console.log(`  Fuentes exitosas: ${validPrices.length}/2`);
+    console.log(`  Fuentes: ${validPrices.map((p) => p.source).join(", ")}`);
+    console.log(`${"=".repeat(80)}\n`);
+
     return {
       averagePriceEur: parseFloat(avgEur.toFixed(2)),
       averagePriceUsd: parseFloat(avgUsd.toFixed(2)),
       sources: validPrices,
       sourceCount: validPrices.length,
+      sourcesStatus,
     };
   } catch (error) {
-    console.error(`Error agregando precios para ${cardId}:`, error.message);
+    console.error(`\n❌ ERROR CRÍTICO en getAggregatedPrice:`);
+    console.error(`   Mensaje: ${error.message}`);
+
+    // Marcar como error crítico
+    await markCardWithoutPrice(cardId, error.message);
+
     throw error;
   }
 };
 
 // Obtiene precio de TCGPlayer
-async function getTCGPlayerPrice(cardName, localId) {
+async function getTCGPlayerPrice(cardId) {
   try {
     const response = await fetch(
-      `${POKEMON_TCG_API_URL}/cards?q=name:"${cardName}" number:${localId}`,
+      `${POKEMON_TCG_API_URL}/cards?q=name:"${cardId}"`,
       {
         headers: { "X-Api-Key": process.env.POKEMON_TCG_API_KEY || "" },
       },
