@@ -68,3 +68,26 @@ export async function isCardWithoutPrice(cardId) {
     return null;
   }
 }
+
+/**
+ * Obtiene lista de cartas sin precio
+ *
+ * @param {number} minAttempts - Minimo de intentos fallidos (default: 2)
+ * @returns {Array} Lista e Ids de cartas sin precio
+ */
+export async function getCardsWithoutPrice(minAttempts = 2) {
+  try {
+    const queryText = `
+      SELECCT card_id, attempt_count, last_attempt, last_error
+      FROM cards_without_price
+      WHERE attempt_count >= $1
+      ORDER BY last_attempt DESC
+    `;
+
+    const result = await query(query, [minAttempts]);
+    return result.rows;
+  } catch (error) {
+    console.error("Error obteniendo cartas sin precio:", error.message);
+    return [];
+  }
+}
