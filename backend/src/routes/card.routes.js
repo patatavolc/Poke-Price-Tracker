@@ -13,6 +13,7 @@ router.get("/:id", getCardDetails);
 router.get("/price/:id", getCardPrice);
 router.get("/set/:set_id", getCardsFromSet);
 router.get("/trending/price-increase", getTrendingPriceIncrease);
+router.get("/trending/price-decrease", getTrendingPriceIncrease);
 router.get("/cards/expensive", getExpensiveCards);
 
 /**

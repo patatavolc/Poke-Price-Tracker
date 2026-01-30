@@ -3,6 +3,7 @@ import {
   getCardByIdWithHistory,
   getCardPriceService,
   getTrendingPriceIncreaseService,
+  getTrendingPriceDecreaseService,
   getCardsFromSetService,
 } from "../services/card.service.js";
 
@@ -58,6 +59,23 @@ export const getTrendingPriceIncrease = async (req, res) => {
 
   try {
     const cards = await getTrendingPriceIncreaseService(period);
+    res.json(cards);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+export const getTrendingDecrease = async (req, res) => {
+  const { period = "24h" } = req.query;
+
+  if (!["24h", "7d"].includes(period)) {
+    return res
+      .status(400)
+      .json({ error: "Período inválido. Use '24h' o '7d'." });
+  }
+
+  try {
+    const cards = await getTrendingPriceDecreaseService(period);
     res.json(cards);
   } catch (error) {
     res.status(500).json({ error: error.message });
