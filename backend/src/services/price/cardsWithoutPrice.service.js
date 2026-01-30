@@ -119,3 +119,23 @@ export async function retryCardsWithoutPrice(olderThanDays = 30) {
     return [];
   }
 }
+
+/**
+ * Elimina una carta de la lista de sin precio
+ * (útil cuando finalmente se obtiene un precio)
+ *
+ * @param {string} cardId - ID de la carta
+ */
+export async function removeCardWithoutPrice(cardId) {
+  try {
+    const queryText = `
+      DELETE FROM cards_without_price
+      WHERE card_id = $1
+    `;
+
+    await query(queryText, [cardId]);
+    console.log(`Carta ${cardId} removida de lista sin precio`);
+  } catch (error) {
+    console.error(`Error removiendo carta sin precio:`, error.message);
+  }
+}
