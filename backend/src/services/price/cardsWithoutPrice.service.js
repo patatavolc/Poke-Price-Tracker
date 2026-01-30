@@ -91,3 +91,31 @@ export async function getCardsWithoutPrice(minAttempts = 2) {
     return [];
   }
 }
+
+/**
+ * Reintenta obtener precio de cartas marcadas como sin precio
+ * Util despues de un tiempo para verificar si ahora tienen precio disponible
+ *
+ * @param {number} olderThanDays - Solo reintentar cartas con ultimo intneto hace X dias
+ * @returns {Object} Estadisticas del reintento
+ */
+export async function retryCardsWithoutPrice(olderThanDays = 30) {
+  try {
+    const queryText = `
+      SELECT card_id
+      FROM cards_without_price
+      WHERE last_attempt < NOW() - INTERVAL '1 day' * $1
+      ORDER BY attempt_count ASC
+      LIMIT 50
+    `;
+
+    const result = await query(queryText, [olderThanDays]);
+
+    console.log(`Reintentando ${result.rows.length} cartas sin precio...`);
+
+    return result.rows.map((row) => row.card_id);
+  } catch (error) {
+    console.error(`Error obteniendo cartas para reintentar:`, error.message);
+    return [];
+  }
+}
