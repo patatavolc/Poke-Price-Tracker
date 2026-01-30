@@ -168,3 +168,28 @@ export const getCheapestCardsService = async (limit = 20, currency = "eur") => {
   const res = await query(queryText, [limit]);
   return res.rows;
 };
+
+// Rangos de precio en un periodo
+export const getPriceRangeService = async (cardId, days = 30) => {
+  const queryText = `
+    SELECT
+      MIN(price_eur) as min_price_eur,
+      MAX(price_eur) as max_price_eur,
+      AVG(price_eur) as avg_price_eur,
+      MIN(price_usd) as min_price_usd,
+      MAX(price_usd) as max_price_usd,
+      AVG(price_usd) as avg_price_usd,
+      COUNT(*) as data_points
+    FROM price_history
+    WHERE card_id = $1
+      AND created_at >= NOW() - INTERVAL '1 day' * $2
+  `;
+
+  const res = await query(queryText, [cardId, days]);
+
+  if (res.rows.length === 0 || res.rows[0].data_points === "0") {
+    return null;
+  }
+
+  return res.rows[0];
+};

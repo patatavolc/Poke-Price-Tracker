@@ -7,6 +7,7 @@ import {
   getCardsFromSetService,
   getMostExpensiveCardsService,
   getCheapestCardsService,
+  getPriceRangeService,
 } from "../services/card.service.js";
 
 export const getCardDetails = async (req, res) => {
@@ -113,6 +114,26 @@ export const getCheapCards = async (req, res) => {
   try {
     const cards = await getCheapestCardsService(limit, currency);
     res.json(cards);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+export const getPriceRange = async (req, res) => {
+  const { id } = req.params;
+  const { days = 30 } = req.query;
+
+  try {
+    const priceRange = await getPriceRangeService(id, parseInt(days));
+
+    if (!priceRange) {
+      return res.status(404).json({
+        error:
+          "No hay datos de precios para esta carta en el periodo especificado",
+      });
+    }
+
+    res.json(priceRange);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
