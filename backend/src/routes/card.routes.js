@@ -9,6 +9,7 @@ import {
   getTrendingPriceDecrease,
   getPriceRange,
   checkPriceAlert,
+  compareCardPrices,
 } from "../controllers/card.controller.js";
 
 const router = express.Router();
@@ -22,6 +23,7 @@ router.get("/expensive", getExpensiveCards);
 router.get("/cheap", getCheapCards);
 (router.get("/:id/price-range", getPriceRange),
   router.get("/:id/price-alert", checkPriceAlert));
+router.get("/compare", compareCardPrices);
 
 /**
  * TODO:

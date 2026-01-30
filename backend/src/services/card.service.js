@@ -229,3 +229,23 @@ export const checkPriceAlertService = async (
     difference: parseFloat(threshold) - parseFloat(card.current_price),
   };
 };
+
+export const compareCardPricesService = async (cardsIds) => {
+  const queryText = `
+  SELECT
+    c.id,
+    c.name,
+    c.image_small,
+    c.rarity,
+    c.last_price_eur,
+    c.last_price_usd,
+    s.name as set_name
+  FROM cards c
+  LEFT JOIN sets s ON c.set_id = s.id
+  WHERE c.id = ANY($1::varchar[])
+  ORDER BY c.last_price_eur DESC
+  `;
+
+  const res = await query(queryText, [cardsIds]);
+  return res.rows;
+};

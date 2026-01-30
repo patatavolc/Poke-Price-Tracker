@@ -9,6 +9,7 @@ import {
   getCheapestCardsService,
   getPriceRangeService,
   checkPriceAlertService,
+  compareCardPricesService,
 } from "../services/card.service.js";
 
 export const getCardDetails = async (req, res) => {
@@ -162,6 +163,33 @@ export const checkPriceAlert = async (req, res) => {
     }
 
     res.json(alert);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+export const compareCardPrices = async (req, res) => {
+  const { ids } = req.query;
+
+  if (!ids) {
+    return res.status(400).json({ error: "El parametro 'ids' es requerido" });
+  }
+
+  const cardIds = ids.split(",").map((id) => id.trim());
+
+  if (cardIds.length < 2) {
+    return res
+      .status(400)
+      .json({ error: "Debes proporcionar al menos 2 cartas para comparar" });
+  }
+
+  if (cardIds.length > 10) {
+    return res.status(400).json({ error: "Maximo 10 cartas para comparar" });
+  }
+
+  try {
+    const cards = await compareCardPricesService(cardIds);
+    res.json(cards);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
