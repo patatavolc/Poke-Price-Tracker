@@ -21,8 +21,8 @@ router.get("/trending/price-increase", getTrendingPriceIncrease);
 router.get("/trending/price-decrease", getTrendingPriceDecrease);
 router.get("/expensive", getExpensiveCards);
 router.get("/cheap", getCheapCards);
-(router.get("/:id/price-range", getPriceRange),
-  router.get("/:id/price-alert", checkPriceAlert));
+router.get("/:id/price-range", getPriceRange);
+router.get("/:id/price-alert", checkPriceAlert);
 router.get("/compare", compareCardPrices);
 
 /**
