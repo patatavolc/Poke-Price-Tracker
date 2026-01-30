@@ -5,6 +5,8 @@ import {
   getCardsFromSet,
   getTrendingPriceIncrease,
   getExpensiveCards,
+  getCheapCards,
+  getTrendingPriceDecrease,
 } from "../controllers/card.controller.js";
 
 const router = express.Router();
@@ -13,8 +15,9 @@ router.get("/:id", getCardDetails);
 router.get("/price/:id", getCardPrice);
 router.get("/set/:set_id", getCardsFromSet);
 router.get("/trending/price-increase", getTrendingPriceIncrease);
-router.get("/trending/price-decrease", getTrendingPriceIncrease);
+router.get("/trending/price-decrease", getTrendingPriceDecrease);
 router.get("/cards/expensive", getExpensiveCards);
+router.get("/cards/cheap", getCheapCards);
 
 /**
  * TODO:

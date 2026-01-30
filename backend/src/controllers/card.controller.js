@@ -5,6 +5,8 @@ import {
   getTrendingPriceIncreaseService,
   getTrendingPriceDecreaseService,
   getCardsFromSetService,
+  getMostExpensiveCardsService,
+  getCheapestCardsService,
 } from "../services/card.service.js";
 
 export const getCardDetails = async (req, res) => {
@@ -65,7 +67,7 @@ export const getTrendingPriceIncrease = async (req, res) => {
   }
 };
 
-export const getTrendingDecrease = async (req, res) => {
+export const getTrendingPriceDecrease = async (req, res) => {
   const { period = "24h" } = req.query;
 
   if (!["24h", "7d"].includes(period)) {
@@ -93,6 +95,23 @@ export const getExpensiveCards = async (req, res) => {
 
   try {
     const cards = await getMostExpensiveCardsService(limit, currency);
+    res.json(cards);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+export const getCheapCards = async (req, res) => {
+  const { limit = 20, currency = "eur" } = req.query;
+
+  if (!["eur", "usd"].includes(currency)) {
+    return res
+      .status(400)
+      .json({ error: "Moneda inválida. Use 'eur' o 'usd'." });
+  }
+
+  try {
+    const cards = await getCheapestCardsService(limit, currency);
     res.json(cards);
   } catch (error) {
     res.status(500).json({ error: error.message });
