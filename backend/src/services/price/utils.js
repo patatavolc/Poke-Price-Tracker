@@ -1,9 +1,34 @@
+/**
+ * Utilidades para el sistema de precios
+ *
+ * Funciones auxiliares usadas por los proveedores de precios y servicios de sincronización.
+ */
+
 import { query } from "../../config/db.js";
 
+/**
+ * Pausa la ejecución por un número específico de milisegundos
+ *
+ * Útil para implementar delays entre peticiones a APIs y evitar rate limiting.
+ *
+ * @param {number} ms - Milisegundos a esperar
+ * @returns {Promise} Promesa que se resuelve después del delay
+ *
+ * @example
+ * await sleep(2500); // Espera 2.5 segundos
+ */
 export const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
-// Función auxiliar: Obtener tcgplayerId de una carta desde la DB
-// Las cartas tienen tcgplayer_url guardado, necesitamos extraer el ID
+/**
+ * Obtiene el ID de TCGPlayer de una carta desde la base de datos
+ *
+ * NOTA: Esta función es legacy y puede no ser necesaria con la API actual.
+ * Las cartas tienen tcgplayer_url guardado pero no siempre contiene un productId numérico.
+ *
+ * @param {string} cardId - ID de la carta en la base de datos
+ * @returns {string|null} ID de TCGPlayer o el mismo cardId como fallback, null si falla
+ * @deprecated Considerar usar directamente el cardId de Pokemon TCG API
+ */
 export async function getTCGPlayerIdFromDB(cardId) {
   try {
     console.log(`    🔍 Buscando TCGPlayer URL en DB para ${cardId}...`);
@@ -31,16 +56,17 @@ export async function getTCGPlayerIdFromDB(cardId) {
     // Ejemplo: "https://prices.tcgplayer.com/pokemon/..."
     // El ID puede estar al final o en el path
 
-    // Intentar extraer el ID del producto
-    // La API de Pokemon TCG guarda URLs pero no el productId directamente
-    // Tendremos que usar el cardId de Pokemon TCG directamente para buscar en JustTCG
+    // La URL de TCGPlayer no contiene un productId numérico extraíble
+    // La API de Pokemon TCG guarda URLs descriptivas pero no IDs de producto
+    // Solución: usar directamente el cardId de Pokemon TCG API que es universal
 
     console.log(
       `    ⚠️ TCGPlayer URL existe pero no contiene productId numérico`,
     );
     console.log(`    💡 Usaré el card ID de Pokemon TCG: ${cardId}`);
 
-    return cardId; // Devolvemos el cardId para intentar buscar por nombre
+    // Devolver el cardId original como fallback - las APIs modernas aceptan este formato
+    return cardId;
   } catch (error) {
     console.error(`    🔴 Error obteniendo tcgplayerId de DB:`, error.message);
     return null;
