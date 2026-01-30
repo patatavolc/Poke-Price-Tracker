@@ -81,3 +81,29 @@ export const getTrendingPriceIncreaseService = async (period = "24h") => {
   const res = await query(queryText);
   return res.rows;
 };
+
+export const getMostExpensiveCardsService = async (
+  limit = 20,
+  currency = "eur",
+) => {
+  const priceColumn = currency === "usd" ? "last_price_usd" : "last_price_eur";
+
+  const queryText = `
+    SELECT
+      c.id,
+      c.name,
+      c.image_small,
+      c.rarity,
+      c.last_price_eur,
+      c.last_price_usd,
+      s.name AS set_name
+    FROM cards c
+    JOIN sets s ON c.set_id = s.id
+    WHERE c.${priceColumn} IS NOT NULL
+    ORDER BY c.${priceColumn} DESC
+    LIMIT $1
+  `;
+
+  const res = await query(queryText, [limit]);
+  return res.rows;
+};

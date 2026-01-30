@@ -63,3 +63,20 @@ export const getTrendingPriceIncrease = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
+
+export const getExpensiveCards = async (req, res) => {
+  const { limit = 20, currency = "eur" } = req.query;
+
+  if (!["eur", "usd"].includes(currency)) {
+    return res
+      .status(400)
+      .json({ error: "Moneda inválida. Use 'eur' o 'usd'." });
+  }
+
+  try {
+    const cards = await getMostExpensiveCardsService(limit, currency);
+    res.json(cards);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
