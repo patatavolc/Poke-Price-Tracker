@@ -193,3 +193,39 @@ export const getPriceRangeService = async (cardId, days = 30) => {
 
   return res.rows[0];
 };
+
+// Verificar alerta de precio
+export const checkPriceAlertService = async (
+  cardId,
+  threshold,
+  currency = "eur",
+) => {
+  const priceColumn = currency === "usd" ? "last_price_usd" : "last_price_eur";
+
+  const queryText = `
+  SELECT
+    id,
+    name,
+    ${priceColumn} as current_price,
+    image_small
+  FROM cards
+  WHERE i = $1
+  `;
+
+  const res = await query(query, [cardId]);
+
+  if (res.rows.length === 0) {
+    return null;
+  }
+
+  const card = res.rows[0];
+  const isBelowThreshold =
+    parseFloat(card.current_price) <= parseFloat(threshold);
+
+  return {
+    ...card,
+    threshold: parseFloat(threshold),
+    is_bellow_threshold: isBelowThreshold,
+    difference: parseFloat(threshold) - parseFloat(card.current_price),
+  };
+};

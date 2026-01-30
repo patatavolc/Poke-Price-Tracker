@@ -8,6 +8,7 @@ import {
   getMostExpensiveCardsService,
   getCheapestCardsService,
   getPriceRangeService,
+  checkPriceAlertService,
 } from "../services/card.service.js";
 
 export const getCardDetails = async (req, res) => {
@@ -134,6 +135,33 @@ export const getPriceRange = async (req, res) => {
     }
 
     res.json(priceRange);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+export const checkPriceAlert = async (req, res) => {
+  const { id } = req.params;
+  const { threshold, currency = "eur" } = req.query;
+
+  if (!threshold) {
+    return res
+      .status(400)
+      .json({ error: "El parametro 'threshold' es obligatorio" });
+  }
+
+  if (!["eur", "usd"].includes(currency)) {
+    return res.status(400).json({ error: "La moneda debe ser 'eur' o 'usd'" });
+  }
+
+  try {
+    const alert = await checkPriceAlertService(id, threshold, currency);
+
+    if (!alert) {
+      return res.status(404).json({ eur: "Carta no encontrada" });
+    }
+
+    res.json(alert);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
