@@ -47,3 +47,24 @@ export async function markCardWithoutPrice(
     throw error;
   }
 }
+
+/**
+ * Verifica si una carta esta marcada como sin precio
+ *
+ * @param {string} cardId -Id de la carta
+ * @returns {Object|null} Informacion de la carta sin precio o null
+ */
+export async function isCardWithoutPrice(cardId) {
+  try {
+    const queryText = `
+    SELECT * FROM cards_without_price
+    WHERE card_id = $1
+    `;
+
+    const result = await query(queryText, [cardId]);
+    return result.rows.length > 0 ? result.rows[0] : null;
+  } catch (error) {
+    console.error("Error verificando carta sin precio:", error.message);
+    return null;
+  }
+}
