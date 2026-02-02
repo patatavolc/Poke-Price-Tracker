@@ -1,9 +1,9 @@
 /**
  * Sistema de tareas programadas
  *
- * Coordinador principal que testiona todas las tareas cron del sistema
+ * Coordinador principal que gestiona todas las tareas cron del sistema
  */
-import cron, { schedule } from "node-cron";
+import cron from "node-cron";
 import { SCHEDULES, INITIAL_FILL_CONFIG } from "./config/schedules.config.js";
 import { syncSetsTask } from "./task/syncSets.task.js";
 import { syncCardsTask } from "./task/syncCards.task.js";
@@ -12,25 +12,25 @@ import {
   updateNormalPricesTask,
 } from "./task/updatePrices.task.js";
 import { retryWithoutPriceTask } from "./task/retryWithoutPrice.task.js";
-import { fillinitialPrices } from "./scheduler.cron.js";
+import { fillInitialPrices } from "./utils/fillInitialPrices.js";
 
 class SchedulerManager {
   constructor() {
-    this.task = [];
+    this.tasks = [];
     this.isRunning = false;
   }
 
   /**
    * Registra una tarea programada
    */
-  register(name, chedule, taskFunction, enabled = true) {
+  register(name, schedule, taskFunction, enabled = true) {
     if (!enabled) {
-      console.log(`[${name}] Deshabilitado`);
+      console.log(`⏸️  [${name}] Deshabilitado`);
       return;
     }
 
     if (!cron.validate(schedule)) {
-      console.error(`[${name}] Schedule invalido: ${schedule}`);
+      console.error(`❌ [${name}] Schedule inválido: ${schedule}`);
       return;
     }
 
@@ -40,37 +40,40 @@ class SchedulerManager {
         try {
           await taskFunction();
         } catch (error) {
-          console.error(`[${name}] Error critico:`, error.message);
+          console.error(`❌ [${name}] Error crítico:`, error.message);
         }
       },
       {
-        scheduled: false, // No iniciar automaticamente
+        scheduled: false, // No iniciar automáticamente
       },
     );
 
-    this.task.push({ name, schedule, task, enabled });
-    console.log(`[${name}] Registrado: ${schedule}`);
+    this.tasks.push({ name, schedule, task, enabled }); // FIX: era 'this.task'
+    console.log(`✅ [${name}] Registrado: ${schedule}`);
   }
 
+  /**
+   * Inicia todas las tareas programadas
+   */
   start() {
     if (this.isRunning) {
-      console.warn(" Scheduler ya está en ejecución");
+      console.warn("⚠️  Scheduler ya está en ejecución");
       return;
     }
 
     console.log(`\n${"=".repeat(80)}`);
-    console.log(" INICIANDO SISTEMA DE TAREAS PROGRAMADAS");
+    console.log("🚀 INICIANDO SISTEMA DE TAREAS PROGRAMADAS");
     console.log(`${"=".repeat(80)}\n`);
 
     this.tasks.forEach(({ name, task }) => {
       task.start();
-      console.log(`  [${name}] Iniciado`);
+      console.log(`▶️  [${name}] Iniciado`);
     });
 
     this.isRunning = true;
 
     console.log(`\n${"=".repeat(80)}`);
-    console.log(` ${this.tasks.length} tareas programadas activas`);
+    console.log(`✅ ${this.tasks.length} tareas programadas activas`);
     console.log(`${"=".repeat(80)}\n`);
   }
 
@@ -78,15 +81,15 @@ class SchedulerManager {
    * Detiene todas las tareas programadas
    */
   stop() {
-    console.log("\nDeteniendo tareas programadas...");
+    console.log("\n🛑 Deteniendo tareas programadas...");
 
     this.tasks.forEach(({ name, task }) => {
       task.stop();
-      console.log(`  [${name}] Detenido`);
+      console.log(`⏹️  [${name}] Detenido`);
     });
 
     this.isRunning = false;
-    console.log(" Todas las tareas detenidas\n");
+    console.log("✅ Todas las tareas detenidas\n");
   }
 
   /**
@@ -105,13 +108,14 @@ class SchedulerManager {
   }
 }
 
+// Instancia global del scheduler
 const scheduler = new SchedulerManager();
 
 /**
  * Configura e inicia todas las tareas programadas
  */
 export async function startAllSchedulers(fillPricesFirst = false) {
-  console.log("\n CONFIGURANDO TAREAS PROGRAMADAS...\n");
+  console.log("\n📅 CONFIGURANDO TAREAS PROGRAMADAS...\n");
 
   // Llenado inicial de precios (opcional)
   if (fillPricesFirst || INITIAL_FILL_CONFIG.enabled) {
@@ -126,7 +130,7 @@ export async function startAllSchedulers(fillPricesFirst = false) {
     }
   }
 
-  // Regsitrar tareas
+  // Registrar tareas
   scheduler.register(
     "SYNC_SETS",
     SCHEDULES.SYNC_SETS.cron,
@@ -162,6 +166,7 @@ export async function startAllSchedulers(fillPricesFirst = false) {
     SCHEDULES.RETRY_WITHOUT_PRICE.enabled,
   );
 
+  // Iniciar scheduler
   scheduler.start();
 
   return scheduler;
@@ -175,7 +180,7 @@ export function stopAllSchedulers() {
 }
 
 /**
- * Ontiene el estado del scheduler
+ * Obtiene estado del scheduler
  */
 export function getSchedulerStatus() {
   return scheduler.getStatus();
