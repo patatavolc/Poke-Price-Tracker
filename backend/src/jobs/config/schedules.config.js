@@ -43,4 +43,9 @@ export const SCHEDULES = {
   },
 };
 
-
+// Configuracin de llenado inicial
+export const INITIAL_FILL_CONFIG = {
+  enabled: false, // Cambiar a true para ejecutar al iniciar
+  batchSize: 50,
+  description: "Llenar precios iniciales de cartas sin precio",
+};
