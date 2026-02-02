@@ -97,15 +97,13 @@ export async function updateNormalPricesTask(batchSize = 100) {
 }
 
 /**
- * Actualiza TODAS las cartas en lotes (para 19.000+ cartas)
- * Se ejecuta en segundo plano y toma varias horas
+ * Actualiza TODAS las cartas en lotes (para 19,000+ cartas)
  */
 export async function updateAllPricesTask(batchSize = 100, delayMs = 2000) {
   const logger = new TaskLogger("UPDATE_ALL_PRICES");
   logger.start();
 
   try {
-    // Obtener el total de cartas
     const { rows: totalResult } = await query(
       `SELECT COUNT(*) as total FROM cards`,
     );
@@ -117,15 +115,9 @@ export async function updateAllPricesTask(batchSize = 100, delayMs = 2000) {
     let offset = 0;
     let processedCards = 0;
 
-    // Procesar en lotes
     while (processedCards < totalCards) {
       const { rows: cards } = await query(
-        `
-        SELECT id, name
-        FROM cards
-        ORDER BY id
-        LIMIT $1 OFFSET $2
-        `,
+        `SELECT id, name FROM cards ORDER BY id LIMIT $1 OFFSET $2`,
         [batchSize, offset],
       );
 
@@ -139,8 +131,6 @@ export async function updateAllPricesTask(batchSize = 100, delayMs = 2000) {
         try {
           await syncAggregatedPrice(card.id);
           logger.success(`${card.name} (${++processedCards}/${totalCards})`);
-
-          // Delay de 2 segundos para no saturar las APIs externas
           await new Promise((resolve) => setTimeout(resolve, delayMs));
         } catch (error) {
           logger.error(`Error en ${card.name}`, error);
@@ -150,7 +140,6 @@ export async function updateAllPricesTask(batchSize = 100, delayMs = 2000) {
 
       offset += batchSize;
 
-      // Log de progreso cada 500 cartas
       if (processedCards % 500 === 0) {
         const progress = ((processedCards / totalCards) * 100).toFixed(2);
         logger.info(`Progreso: ${processedCards}/${totalCards} (${progress}%)`);
