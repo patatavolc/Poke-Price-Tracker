@@ -8,6 +8,10 @@ import {
   getSchedulerStatus,
 } from "./src/jobs/scheduler.js";
 import { fillInitialPrices } from "./src/jobs/utils/fillInitialPrices.js";
+import {
+  globalErrorHandler,
+  notFoundHandler,
+} from "./src/middleware/errorHandler.js";
 
 dotenv.config();
 
@@ -45,6 +49,10 @@ app.get("/api/admin/scheduler-status", (req, res) => {
     res.status(500).json({ error: error.message });
   }
 });
+
+// Middleware de manejo de errores
+app.use(notFoundHandler); // 404
+app.use(globalErrorHandler); // Errores generales
 
 // Prueba de conexión a Supabase
 async function testDbConnection() {
