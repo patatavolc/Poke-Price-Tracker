@@ -95,8 +95,50 @@ export const clearCacheByPattern = (pattern) => {
         clearedCount++;
       }
     });
-  })
+  });
 
-  console.log(`${clearedCount} entradas de cache eliminadas (patron: ${pattern})`);
+  console.log(
+    `${clearedCount} entradas de cache eliminadas (patron: ${pattern})`,
+  );
   return clearedCount;
-}
+};
+
+// Obtiene estadisticas del cache
+export const getCacheStats = () => {
+  return {
+    short: {
+      keys: shortCache.keys().length,
+      hits: shortCache.getStats().hits,
+      misses: shortCache.getStats().misses,
+      hitRate:
+        (
+          (shortCache.getStats().hits /
+            (shortCache.getStats().hits + shortCache.getStats().misses || 1)) *
+          100
+        ).toFixed(2) + "%",
+    },
+    medium: {
+      keys: mediumCache.keys().length,
+      hits: mediumCache.getStats().hits,
+      misses: mediumCache.getStats().misses,
+      hitRate:
+        (
+          (mediumCache.getStats().hits /
+            (mediumCache.getStats().hits + mediumCache.getStats().misses ||
+              1)) *
+          100
+        ).toFixed(2) + "%",
+    },
+    long: {
+      keys: longCache.keys().length,
+      hits: longCache.getStats().hits,
+      misses: longCache.getStats().misses,
+      hitRate:
+        (
+          (longCache.getStats().hits /
+            (longCache.getStats().hits + longCache.getStats().misses || 1)) *
+          100
+        ).toFixed(2) + "%",
+    },
+  };
+};
