@@ -25,3 +25,86 @@ export const notFoundHandler = (req, res, next) => {
   );
   next(error);
 };
+
+/**
+ * Middleware global de manejo de errores
+ */
+export const globalErrorHandler = (err, req, res, next) => {
+  err.statusCode = err.statusCode || 500;
+  err.status = err.status || "error";
+
+  // Log del error
+  console.error("❌ ERROR:", {
+    message: err.message,
+    statusCode: err.statusCode,
+    path: req.path,
+    method: req.method,
+    timestamp: new Date().toISOString(),
+    stack: process.env.NODE_ENV === "development" ? err.stack : undefined,
+  });
+
+  // Errores de base de datos PostgreSQL
+  if (err.code) {
+    switch (err.code) {
+      case "23505": // Duplicate key violation
+        return res.status(409).json({
+          success: false,
+          error: "Recurso duplicado",
+          message: "El recurso ya existe en la base de datos",
+          details:
+            process.env.NODE_ENV === "development" ? err.detail : undefined,
+        });
+
+      case "23503": // Foreign key violation
+        return res.status(400).json({
+          success: false,
+          error: "Relación inválida",
+          message: "El recurso relacionado no existe",
+          details:
+            process.env.NODE_ENV === "development" ? err.detail : undefined,
+        });
+
+      case "22P02": // Invalid text representation
+        return res.status(400).json({
+          success: false,
+          error: "Formato inválido",
+          message: "El formato de los datos es incorrecto",
+        });
+
+      case "23502": // Not null violation
+        return res.status(400).json({
+          success: false,
+          error: "Campo requerido",
+          message: "Falta un campo obligatorio",
+          details:
+            process.env.NODE_ENV === "development" ? err.column : undefined,
+        });
+    }
+  }
+
+  // Error operacional conocido
+  if (err.isOperational) {
+    return res.status(err.statusCode).json({
+      success: false,
+      error: err.message,
+      details: err.details,
+    });
+  }
+
+  // Error desconocido - no filtrar detalles en producción
+  if (process.env.NODE_ENV === "production") {
+    return res.status(500).json({
+      success: false,
+      error: "Error interno del servidor",
+      message: "Ha ocurrido un error inesperado",
+    });
+  }
+
+  // En desarrollo, mostrar más detalles
+  res.status(err.statusCode).json({
+    success: false,
+    error: err.message,
+    stack: err.stack,
+    details: err,
+  });
+};
