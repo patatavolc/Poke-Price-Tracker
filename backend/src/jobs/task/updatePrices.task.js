@@ -3,7 +3,7 @@
  */
 
 import { query } from "../../config/db.js";
-import { syncAggregatedPrice } from "../../services/price/price.js";
+import { syncAggregatedPrice } from "../../services/price/sync.js";
 import TaskLogger from "../utils/taskLogger.js";
 
 /**
@@ -91,6 +91,75 @@ export async function updateNormalPricesTask(batchSize = 100) {
     return logger.complete();
   } catch (error) {
     logger.error("Error actualizando precios normales", error);
+    logger.complete();
+    throw error;
+  }
+}
+
+/**
+ * Actualiza TODAS las cartas en lotes (para 19.000+ cartas)
+ * Se ejecuta en segundo plano y toma varias horas
+ */
+export async function updateAllPricesTask(batchSize = 100, delayMs = 2000) {
+  const logger = new TaskLogger("UPDATE_ALL_PRICES");
+  logger.start();
+
+  try {
+    // Obtener el total de cartas
+    const { rows: totalResult } = await query(
+      `SELECT COUNT(*) as total FROM cards`,
+    );
+    const totalCards = parseInt(totalResult[0].total);
+
+    logger.info(`Total de cartas: ${totalCards}`);
+    logger.metrics.total = totalCards;
+
+    let offset = 0;
+    let processedCards = 0;
+
+    // Procesar en lotes
+    while (processedCards < totalCards) {
+      const { rows: cards } = await query(
+        `
+        SELECT id, name
+        FROM cards
+        ORDER BY id
+        LIMIT $1 OFFSET $2
+        `,
+        [batchSize, offset],
+      );
+
+      if (cards.length === 0) break;
+
+      logger.info(
+        `Lote ${Math.floor(offset / batchSize) + 1}: ${cards.length} cartas`,
+      );
+
+      for (const card of cards) {
+        try {
+          await syncAggregatedPrice(card.id);
+          logger.success(`${card.name} (${++processedCards}/${totalCards})`);
+
+          // Delay de 2 segundos para no saturar las APIs externas
+          await new Promise((resolve) => setTimeout(resolve, delayMs));
+        } catch (error) {
+          logger.error(`Error en ${card.name}`, error);
+          processedCards++;
+        }
+      }
+
+      offset += batchSize;
+
+      // Log de progreso cada 500 cartas
+      if (processedCards % 500 === 0) {
+        const progress = ((processedCards / totalCards) * 100).toFixed(2);
+        logger.info(`Progreso: ${processedCards}/${totalCards} (${progress}%)`);
+      }
+    }
+
+    return logger.complete();
+  } catch (error) {
+    logger.error("Error actualizando todas las cartas", error);
     logger.complete();
     throw error;
   }

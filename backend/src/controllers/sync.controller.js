@@ -4,8 +4,7 @@ import {
   syncAllCards,
   syncMissingSetsCards,
 } from "../services/pokemon.service.js";
-
-import { syncAllPrices, syncMissingPrices } from "../services/price/index.js";
+import { updateAllPricesTask } from "../jobs/task/updatePrices.task.js";
 
 export const syncSets = async (req, res) => {
   try {
@@ -74,7 +73,7 @@ export const syncMissingPricesCtrl = (req, res) => {
   syncMissingPrices()
     .then((result) =>
       console.log(
-        `Proceso terminado: ${result.success} precios faltantes sincronizados}`,
+        `Proceso terminado: ${result.success} precios faltantes sincronizados`,
       ),
     )
     .catch((error) => console.error("Error en segundo plano:", error.message));
@@ -83,4 +82,25 @@ export const syncMissingPricesCtrl = (req, res) => {
     message:
       "Sincronizacion de precios faltantes iniciada en segundo plano. Revisa la terminal",
   });
+};
+
+export const updateAllPrices = async (req, res) => {
+  try {
+    // Ejecutar en segundo plano
+    updateAllPricesTask(100, 2000)
+      .then((result) => {
+        console.log("✅ Actualización completa:", result);
+      })
+      .catch((error) => {
+        console.error("❌ Error en actualización masiva:", error);
+      });
+
+    res.status(202).json({
+      message: "Actualización masiva iniciada en segundo plano",
+      estimatedTime: "~10-12 horas para 19,000 cartas",
+      note: "Revisa los logs del servidor para ver el progreso",
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
 };
