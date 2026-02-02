@@ -273,18 +273,23 @@ El servidor estará disponible en `http://localhost:3000`
 Una vez el backend esté corriendo, ejecuta estos comandos para poblar la base de datos:
 
 ```bash
-# 1. Sincronizar sets de cartas
+# 1. Sincronizar sets de cartas (~150 sets)
 curl http://localhost:3000/api/sync/sets
 
 # 2. Sincronizar cartas de un set específico (ejemplo: Base Set)
 curl http://localhost:3000/api/sync/cards/base1
 
-# 3. Sincronizar todas las cartas (proceso largo)
+# 3. Sincronizar TODAS las cartas de todos los sets (~19,000 cartas)
 curl http://localhost:3000/api/sync/all-cards
 
-# 4. Actualizar precios (después de tener cartas)
+# 4. Actualizar precios de una carta específica
 curl -X POST "http://localhost:3000/api/prices/update-aggregated/base1-4"
+
+# 5. Actualizar precios de TODAS las cartas (proceso largo: ~10-12 horas)
+curl -X POST "http://localhost:3000/api/sync/update-all-prices"
 ```
+
+**Nota:** El paso 5 es un proceso en segundo plano que actualizará los precios de las ~19,000 cartas. Puedes monitorear el progreso en los logs del servidor.
 
 ### 6. Configurar el Frontend (Opcional)
 
@@ -313,11 +318,13 @@ Para ver la documentación completa del API, consulta [API_DOCUMENTATION.md](bac
 
 #### Sincronización
 
-| Método | Endpoint                 | Descripción                 |
-| ------ | ------------------------ | --------------------------- |
-| `GET`  | `/api/sync/sets`         | Sincroniza todos los sets   |
-| `GET`  | `/api/sync/cards/:setId` | Sincroniza cartas de un set |
-| `GET`  | `/api/sync/all-cards`    | Sincroniza todas las cartas |
+| Método | Endpoint                      | Descripción                           |
+| ------ | ----------------------------- | ------------------------------------- |
+| `GET`  | `/api/sync/sets`              | Sincroniza todos los sets             |
+| `GET`  | `/api/sync/cards/:setId`      | Sincroniza cartas de un set           |
+| `GET`  | `/api/sync/all-cards`         | Sincroniza todas las cartas           |
+| `POST` | `/api/sync/update-all-prices` | Actualiza precios de TODAS las cartas |
+| `GET`  | `/api/sync/missing-prices`    | Actualiza solo cartas sin precio      |
 
 #### Cartas
 
@@ -329,10 +336,17 @@ Para ver la documentación completa del API, consulta [API_DOCUMENTATION.md](bac
 
 #### Precios
 
-| Método | Endpoint                                | Descripción               |
-| ------ | --------------------------------------- | ------------------------- |
-| `POST` | `/api/prices/update-aggregated/:cardId` | Actualiza precio agregado |
-| `GET`  | `/api/cards/:id/price-range`            | Rango de precios          |
+| Método | Endpoint                                | Descripción                       |
+| ------ | --------------------------------------- | --------------------------------- |
+| `POST` | `/api/prices/update-aggregated/:cardId` | Actualiza precio agregado         |
+| `GET`  | `/api/cards/:id/price-range`            | Rango de precios (últimos N días) |
+| `GET`  | `/api/prices/without-price-stats`       | Estadísticas de cartas sin precio |
+
+#### Métricas
+
+| Método | Endpoint                 | Descripción                      |
+| ------ | ------------------------ | -------------------------------- |
+| `GET`  | `/api/sets/:setId/stats` | Estadísticas completas de un set |
 
 ---
 
@@ -382,6 +396,27 @@ curl "http://localhost:3000/api/cards/trending/price-increase?period=24h"
 ```bash
 # Comparar 3 cartas diferentes
 curl "http://localhost:3000/api/cards/compare?ids=base1-4,base1-2,base1-15"
+```
+
+### Actualizar Precios Masivamente
+
+```bash
+# Actualizar precios de TODAS las cartas (~19,000)
+# Proceso en segundo plano: ~10-12 horas
+curl -X POST "http://localhost:3000/api/sync/update-all-prices"
+
+# Ver estadísticas de cartas sin precio
+curl "http://localhost:3000/api/prices/without-price-stats"
+```
+
+### Ver Métricas y Estadísticas
+
+```bash
+# Estadísticas completas de un set
+curl "http://localhost:3000/api/sets/base1/stats"
+
+# Rango de precios de una carta (últimos 30 días)
+curl "http://localhost:3000/api/cards/base1-4/price-range?days=30"
 ```
 
 ---

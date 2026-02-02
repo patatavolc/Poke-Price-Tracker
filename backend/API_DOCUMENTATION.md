@@ -142,6 +142,37 @@ Sincroniza solo las cartas que no tienen precio.
 
 ---
 
+### Actualizar TODOS los Precios
+
+Actualiza precios de todas las cartas en la base de datos (19,000+). Proceso en segundo plano que toma varias horas.
+
+**Endpoint:** `POST /api/sync/update-all-prices`
+
+**Respuesta (202 Accepted):**
+
+```json
+{
+  "message": "Actualización masiva iniciada en segundo plano",
+  "estimatedTime": "~10-12 horas para 19,000 cartas",
+  "note": "Revisa los logs del servidor para ver el progreso"
+}
+```
+
+**Ejemplo:**
+
+```bash
+curl -X POST "http://localhost:3000/api/sync/update-all-prices"
+```
+
+**Características:**
+
+- Procesa en lotes de 100 cartas
+- Delay de 2 segundos entre cartas
+- Muestra progreso cada 500 cartas
+- Se ejecuta completamente en background
+
+---
+
 ## 🃏 Cartas
 
 ### Buscar Cartas
@@ -202,19 +233,19 @@ Filtra cartas por múltiples criterios combinados.
 
 **Query Parameters:**
 
-| Parámetro   | Tipo    | Descripción                   |
-| ----------- | ------- | ----------------------------- |
-| `name`      | string  | Nombre (parcial)              |
-| `setId`     | string  | ID del set                    |
-| `rarity`    | string  | Rareza                        |
-| `supertype` | string  | Supertipo (Pokémon, Trainer)  |
-| `types`     | string  | Tipos separados por coma      |
-| `artist`    | string  | Nombre del artista            |
-| `minPrice`  | float   | Precio mínimo                 |
-| `maxPrice`  | float   | Precio máximo                 |
-| `currency`  | string  | Moneda (`eur` o `usd`)        |
-| `limit`     | integer | Límite (max 100)              |
-| `offset`    | integer | Offset paginación             |
+| Parámetro   | Tipo    | Descripción                  |
+| ----------- | ------- | ---------------------------- |
+| `name`      | string  | Nombre (parcial)             |
+| `setId`     | string  | ID del set                   |
+| `rarity`    | string  | Rareza                       |
+| `supertype` | string  | Supertipo (Pokémon, Trainer) |
+| `types`     | string  | Tipos separados por coma     |
+| `artist`    | string  | Nombre del artista           |
+| `minPrice`  | float   | Precio mínimo                |
+| `maxPrice`  | float   | Precio máximo                |
+| `currency`  | string  | Moneda (`eur` o `usd`)       |
+| `limit`     | integer | Límite (max 100)             |
+| `offset`    | integer | Offset paginación            |
 
 **Validación:**
 
@@ -431,9 +462,9 @@ curl "http://localhost:3000/api/cards/compare?ids=base1-4,base1-2,base1-15"
 
 **Query Parameters:**
 
-| Parámetro | Tipo    | Default | Descripción        |
-| --------- | ------- | ------- | ------------------ |
-| `days`    | integer | 30      | Días hacia atrás   |
+| Parámetro | Tipo    | Default | Descripción      |
+| --------- | ------- | ------- | ---------------- |
+| `days`    | integer | 30      | Días hacia atrás |
 
 **Respuesta (200 OK):**
 
@@ -459,11 +490,11 @@ curl "http://localhost:3000/api/cards/compare?ids=base1-4,base1-2,base1-15"
 
 **Query Parameters:**
 
-| Parámetro     | Tipo   | Requerido | Descripción                           |
-| ------------- | ------ | --------- | ------------------------------------- |
-| `targetPrice` | float  | Sí        | Precio objetivo                       |
+| Parámetro     | Tipo   | Requerido | Descripción                                 |
+| ------------- | ------ | --------- | ------------------------------------------- |
+| `targetPrice` | float  | Sí        | Precio objetivo                             |
 | `condition`   | string | No        | `below`, `above`, `equals` (default: below) |
-| `currency`    | string | No        | `eur`, `usd` (default: eur)           |
+| `currency`    | string | No        | `eur`, `usd` (default: eur)                 |
 
 **Respuesta (200 OK):**
 
@@ -505,8 +536,8 @@ curl "http://localhost:3000/api/cards/compare?ids=base1-4,base1-2,base1-15"
 
 **Query Parameters:**
 
-| Parámetro | Tipo   | Default        | Valores                      |
-| --------- | ------ | -------------- | ---------------------------- |
+| Parámetro | Tipo   | Default        | Valores                          |
+| --------- | ------ | -------------- | -------------------------------- |
 | `orderBy` | string | `release_date` | `release_date`, `name`, `series` |
 
 **Respuesta (200 OK):**
@@ -687,6 +718,63 @@ curl "http://localhost:3000/api/cards/compare?ids=base1-4,base1-2,base1-15"
 
 ---
 
+## 📊 Métricas y Estadísticas
+
+### Estadísticas de un Set
+
+**Endpoint:** `GET /api/sets/:setId/stats`
+
+**Respuesta (200 OK):**
+
+```json
+{
+  "success": true,
+  "data": {
+    "set_id": "base1",
+    "total_cards": 102,
+    "avg_price_usd": 12.5,
+    "max_price_usd": 450.5,
+    "cards_with_price": 98,
+    "rarity_distribution": {
+      "Common": 32,
+      "Rare Holo": 16
+    }
+  }
+}
+```
+
+### Rango de Precios de una Carta
+
+**Endpoint:** `GET /api/cards/:id/price-range?days=30`
+
+**Query Parameters:**
+
+| Parámetro | Tipo    | Default | Descripción      |
+| --------- | ------- | ------- | ---------------- |
+| `days`    | integer | 30      | Días hacia atrás |
+
+**Respuesta (200 OK):**
+
+```json
+{
+  "cardId": "base1-4",
+  "name": "Charizard",
+  "period_days": 30,
+  "price_range_eur": {
+    "min": 420.0,
+    "max": 480.0,
+    "avg": 445.5,
+    "current": 450.0
+  }
+}
+```
+
+### Historial Completo de Precios
+
+Incluido en `GET /api/cards/:id` dentro del campo `priceHistory`.
+
+---
+
 ## 🚦 Rate Limiting
 
 | Tipo de Endpoint | Límite       | Ventana    |
@@ -718,11 +806,11 @@ RateLimit-Reset: 1675345200
 
 ## 💾 Cache
 
-| Cache | TTL    | Endpoints              |
-| ----- | ------ | ---------------------- |
-| Corta | 5 min  | Búsquedas, filtros     |
-| Media | 30 min | Detalles, precios      |
-| Larga | 1 hora | Sets, estadísticas     |
+| Cache | TTL    | Endpoints          |
+| ----- | ------ | ------------------ |
+| Corta | 5 min  | Búsquedas, filtros |
+| Media | 30 min | Detalles, precios  |
+| Larga | 1 hora | Sets, estadísticas |
 
 **Header cacheado:**
 
@@ -793,13 +881,13 @@ RateLimit-Reset: 1675345200
 
 ## 🤖 Tareas Programadas
 
-| Tarea               | Frecuencia      | Descripción               |
-| ------------------- | --------------- | ------------------------- |
-| Sync Sets           | Diaria 3 AM     | Sincroniza sets           |
-| Sync Cards          | Cada 12h        | Actualiza cartas          |
-| Hot Prices          | Cada hora       | Top 50 populares          |
-| Normal Prices       | Cada 6h         | 100 aleatorias            |
-| Retry Without Price | Domingo 4 AM    | Reintentar sin precio     |
+| Tarea               | Frecuencia   | Descripción           |
+| ------------------- | ------------ | --------------------- |
+| Sync Sets           | Diaria 3 AM  | Sincroniza sets       |
+| Sync Cards          | Cada 12h     | Actualiza cartas      |
+| Hot Prices          | Cada hora    | Top 50 populares      |
+| Normal Prices       | Cada 6h      | 100 aleatorias        |
+| Retry Without Price | Domingo 4 AM | Reintentar sin precio |
 
 ---
 
