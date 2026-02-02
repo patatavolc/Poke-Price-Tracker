@@ -249,3 +249,136 @@ export const compareCardPricesService = async (cardsIds) => {
   const res = await query(queryText, [cardsIds]);
   return res.rows;
 };
+
+/**
+ * Búsqueda de cartas por nombre con coincidencia parcial
+ *
+ * @param {string} searchTerm - Término de búsqueda
+ * @param {number} limit - Límite de resultados
+ * @returns {Array} Cartas encontradas
+ */
+export const searchCardsByName = async (searchTerm, limit = 20) => {
+  const queryText = `
+    SELECT
+      c.id,
+      c.name,
+      c.image_small,
+      c.rarity,
+      c.supertype,
+      c.last_price_eur,
+      c.last_price_usd,
+      s.name AS set_name,
+      s.series AS set_series
+    FROM cards c
+    LEFT JOIN sets s ON c.set_id = s.id
+    WHERE c.name ILIKE $1
+    ORDER BY c.name ASC
+    LIMIT $2
+  `;
+
+  const res = await query(queryText, [`%${searchTerm}%`, limit]);
+  return res.rows;
+};
+
+/**
+ * Filtrado avanzado de cartas con múltiples criterios
+ *
+ * @param {Object} filters - Objeto con filtros opcionales
+ * @returns {Array} Cartas filtradas
+ */
+export const filterCards = async (filters) => {
+  const {
+    name,
+    setId,
+    rarity,
+    supertype,
+    types,
+    artist,
+    minPrice,
+    maxPrice,
+    currency = "eur",
+    limit = 50,
+  } = filters;
+
+  const priceColumn = currency === "usd" ? "last_price_usd" : "last_price_eur";
+  const conditions = [];
+  const params = [];
+  let paramIndex = 1;
+
+  // Construir condiciones dinámicamente
+  if (name) {
+    conditions.push(`c.name ILIKE $${paramIndex}`);
+    params.push(`%${name}%`);
+    paramIndex++;
+  }
+
+  if (setId) {
+    conditions.push(`c.set_id = $${paramIndex}`);
+    params.push(setId);
+    paramIndex++;
+  }
+
+  if (rarity) {
+    conditions.push(`c.rarity = $${paramIndex}`);
+    params.push(rarity);
+    paramIndex++;
+  }
+
+  if (supertype) {
+    conditions.push(`c.supertype = $${paramIndex}`);
+    params.push(supertype);
+    paramIndex++;
+  }
+
+  if (types && types.length > 0) {
+    conditions.push(`c.types && $${paramIndex}::text[]`);
+    params.push(types);
+    paramIndex++;
+  }
+
+  if (artist) {
+    conditions.push(`c.artist ILIKE $${paramIndex}`);
+    params.push(`%${artist}%`);
+    paramIndex++;
+  }
+
+  if (minPrice !== undefined) {
+    conditions.push(`c.${priceColumn} >= $${paramIndex}`);
+    params.push(minPrice);
+    paramIndex++;
+  }
+
+  if (maxPrice !== undefined) {
+    conditions.push(`c.${priceColumn} <= $${paramIndex}`);
+    params.push(maxPrice);
+    paramIndex++;
+  }
+
+  const whereClause =
+    conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
+
+  const queryText = `
+    SELECT
+      c.id,
+      c.name,
+      c.image_small,
+      c.rarity,
+      c.supertype,
+      c.types,
+      c.artist,
+      c.last_price_eur,
+      c.last_price_usd,
+      s.name AS set_name,
+      s.series AS set_series
+    FROM cards c
+    LEFT JOIN sets s ON c.set_id = s.id
+    ${whereClause}
+    ORDER BY c.name ASC
+    LIMIT $${paramIndex}
+  `;
+
+  params.push(limit);
+
+  const res = await query(queryText, params);
+  return res.rows;
+};

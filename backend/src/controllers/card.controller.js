@@ -10,6 +10,8 @@ import {
   getPriceRangeService,
   checkPriceAlertService,
   compareCardPricesService,
+  searchCardsByName,
+  filterCards,
 } from "../services/card.service.js";
 
 export const getCardDetails = async (req, res) => {
@@ -190,6 +192,57 @@ export const compareCardPrices = async (req, res) => {
   try {
     const cards = await compareCardPricesService(cardIds);
     res.json(cards);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+/**
+ * GET /api/cards/search
+ * Busca cartas por nombre
+ */
+export const searchCards = async (req, res) => {
+  try {
+    const { searchTerm, limit = 20 } = req.query;
+    const cards = await searchCardsByName(searchTerm, parseInt(limit));
+
+    res.json({
+      success: true,
+      count: cards.length,
+      data: cards,
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+/**
+ * GET /api/cards/filter
+ * Filtra cartas por múltiples criterios
+ */
+export const filterCardsController = async (req, res) => {
+  try {
+    const filters = {
+      name: req.query.name,
+      setId: req.query.setId || req.query.set,
+      rarity: req.query.rarity,
+      supertype: req.query.supertype,
+      types: req.query.types ? req.query.types.split(",") : undefined,
+      artist: req.query.artist,
+      minPrice: req.query.minPrice,
+      maxPrice: req.query.maxPrice,
+      currency: req.query.currency || "eur",
+      limit: parseInt(req.query.limit) || 50,
+    };
+
+    const cards = await filterCards(filters);
+
+    res.json({
+      success: true,
+      count: cards.length,
+      filters: filters,
+      data: cards,
+    });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
