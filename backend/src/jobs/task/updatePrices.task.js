@@ -48,3 +48,50 @@ export async function updateHotPricesTask(batchSize = 50) {
     throw error;
   }
 }
+
+/**
+ * Actualiza precios de cartas normales (sin actualizacion recinte)
+ */
+export async function updateNormalPricesTask(batchSize = 100) {
+  const logger = new TaskLogger("UPDATE_NORMAL_PRICES");
+  logger.start();
+
+  try {
+    // Buscar cartas que NO han sido actualizadas en la utlimas 6 horas
+    const { rows: normalCards } = await query(
+      `
+      SELECT c.id, c.name
+      FROM cards c
+      LEFT JOIN price_history ph ON c.id = ph.card_id 
+        AND ph.created_at > NOW() - INTERVAL '6 hours'
+      WHERE ph.id IS NULL
+        AND c.id NOT IN (
+          SELECT card_id 
+          FROM cards_without_price 
+          WHERE attempt_count >= 3
+        )
+      ORDER BY RANDOM()
+      LIMIT $1
+    `,
+      [batchSize],
+    );
+
+    logger.info(`${normalCards.length} cartas normales para actualizar`);
+    logger.metrics.total = normalCards.length;
+
+    for (const card of normalCards) {
+      try {
+        await syncAggregatedPrice(card.id);
+        logger.success(`${card.name}`);
+      } catch (error) {
+        logger.error(`Error en ${card.name}`, error);
+      }
+    }
+
+    return logger.complete();
+  } catch (error) {
+    logger.error("Error actualizando precios normales", error);
+    logger.complete();
+    throw error;
+  }
+}
