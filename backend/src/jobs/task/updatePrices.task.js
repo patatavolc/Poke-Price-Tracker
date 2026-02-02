@@ -3,7 +3,7 @@
  */
 
 import { query } from "../../config/db.js";
-import { syncAggregatedPrice } from "../../services/price.js";
+import { syncAggregatedPrice } from "../../services/price/price.js";
 import TaskLogger from "../utils/taskLogger.js";
 
 /**

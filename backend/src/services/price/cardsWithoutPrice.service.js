@@ -11,7 +11,7 @@ import { query } from "../../config/db.js";
  * Marca una carta como sin precio disponible
  *
  * @param {string} cardId - Id de la carta
- * #@param {string} errorMessage - Mensaje de error (opcional)
+ * @param {string} errorMessage - Mensaje de error (opcional)
  * @param {Object} sourcesStatus - Estado de cada fuente consultada
  */
 export async function markCardWithoutPrice(
