@@ -55,3 +55,48 @@ export const cacheMiddleware = (duration = 300, keyGenerator = null) => {
     next();
   };
 };
+
+/**
+ * Obtiene la instancia de cache segun duracion
+ */
+function getCacheByDuration(duration) {
+  if (duration <= 300) return shortCache;
+  if (duration <= 1800) return mediumCache;
+  return longCache;
+}
+
+// Cache corto (5 minutos) - para datos que cambian frecuentemente
+export const shortCacheMiddleware = cacheMiddleware(300);
+
+// Cache medio (30 minutos) - para datos semi-estaticos
+export const mediumCacheMiddleware = cacheMiddleware(1800);
+
+// Cache largo (1 hora) - para datos estaticos
+export const longCacheMiddleware = cacheMiddleware(3600);
+
+// Limpia todo el cache
+export const clearAllCaches = () => {
+  shortCache.flushAll();
+  mediumCache.flushAll();
+  longCache.flushAll();
+  console.log("Cache limpiado completamente");
+};
+
+// Limpia cache por patron
+export const clearCacheByPattern = (pattern) => {
+  const regex = new RegExp(pattern);
+  let clearedCount = 0;
+
+  [shortCache, mediumCache, longCache].forEach((cache) => {
+    const keys = cache.keys();
+    keys.forEach((key) => {
+      if (regex.test(key)) {
+        cache.del(key);
+        clearedCount++;
+      }
+    });
+  })
+
+  console.log(`${clearedCount} entradas de cache eliminadas (patron: ${pattern})`);
+  return clearedCount;
+}
