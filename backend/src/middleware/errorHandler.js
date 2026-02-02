@@ -108,3 +108,12 @@ export const globalErrorHandler = (err, req, res, next) => {
     details: err,
   });
 };
+
+/**
+ * Wrapper para async handlers - evita try/catch en cada controlador
+ */
+export const asyncHandler = (fn) => {
+  return (req, res, next) => {
+    Promise.resolve(fn(req, res, next)).catch(next);
+  };
+};
