@@ -1,6 +1,22 @@
-# 📖 Poke Price Tracker - API Documentation
+# 📚 API Documentation - Poke Price Tracker
 
-API REST para seguimiento de precios de cartas Pokémon TCG con agregación de múltiples fuentes (TCGPlayer y Cardmarket).
+**Versión:** 1.0.0  
+**Base URL:** `http://localhost:3000/api`  
+**Última actualización:** 2 Febrero 2026
+
+---
+
+## 📋 Tabla de Contenidos
+
+- [Configuración](#-configuración)
+- [Sincronización](#-sincronización)
+- [Cartas](#-cartas)
+- [Sets](#-sets)
+- [Precios](#-precios)
+- [Rate Limiting](#-rate-limiting)
+- [Cache](#-cache)
+- [Códigos de Error](#️-manejo-de-errores)
+- [Ejemplos de Uso](#-ejemplos-de-uso)
 
 ---
 
@@ -26,315 +42,498 @@ PORT=3000
 NODE_ENV=development
 ```
 
-### Iniciar servidor
+### Iniciar Servidor
 
 ```bash
 npm install
 npm run dev  # Modo desarrollo con nodemon
 npm start    # Producción
-npm test     # Tests con cobertura
 ```
 
 ---
 
-## 📚 Endpoints
+## 🔄 Sincronización
 
-### Base URL
+### Sincronizar Sets
 
-```
-http://localhost:3000/api
-```
+Obtiene y guarda todos los sets de cartas desde la API de Pokemon TCG.
 
----
+**Endpoint:** `GET /api/sync/sets`
 
-## 🃏 Cards (Cartas)
-
-### 1. Obtener todas las cartas
-
-```http
-GET /api/cards
-```
-
-**Query Parameters:**
-
-- `limit` (number, opcional): Número de resultados (1-100, default: 20)
-- `offset` (number, opcional): Offset para paginación (default: 0)
-- `sortBy` (string, opcional): Campo de ordenación (`name`, `number`, `rarity`, `release_date`, `last_price_usd`, `last_price_eur`)
-- `sortOrder` (string, opcional): Dirección de ordenación (`asc`, `desc`, default: `asc`)
-
-**Ejemplo:**
-
-```bash
-curl "http://localhost:3000/api/cards?limit=10&sortBy=last_price_usd&sortOrder=desc"
-```
+**Rate Limit:** 10 requests/hora
 
 **Respuesta (200 OK):**
 
 ```json
 {
-  "success": true,
-  "data": [
-    {
-      "id": "base1-4",
-      "name": "Charizard",
-      "supertype": "Pokémon",
-      "subtypes": ["Stage 2"],
-      "number": "4",
-      "rarity": "Rare Holo",
-      "set_id": "base1",
-      "set_name": "Base Set",
-      "release_date": "1999-01-09",
-      "last_price_usd": 450.5,
-      "last_price_eur": 410.0,
-      "image_url": "https://images.pokemontcg.io/base1/4_hires.png"
-    }
-  ],
-  "pagination": {
-    "limit": 10,
-    "offset": 0,
-    "total": 1524
-  }
+  "message": "Sets sincronizados correctamente",
+  "count": 150
+}
+```
+
+**Ejemplo:**
+
+```bash
+curl http://localhost:3000/api/sync/sets
+```
+
+---
+
+### Sincronizar Cartas de un Set
+
+Sincroniza todas las cartas de un set específico.
+
+**Endpoint:** `GET /api/sync/cards/:setId`
+
+**Parámetros URL:**
+
+| Parámetro | Tipo   | Requerido | Descripción              |
+| --------- | ------ | --------- | ------------------------ |
+| `setId`   | string | Sí        | ID del set (ej: "base1") |
+
+**Validación:** `^[a-z0-9]+$`
+
+**Respuesta (200 OK):**
+
+```json
+{
+  "message": "Cartas del set base1 sincronizadas",
+  "count": 102
+}
+```
+
+**Ejemplo:**
+
+```bash
+curl -X POST http://localhost:3000/api/sync/cards/base1
+```
+
+---
+
+### Sincronizar Todas las Cartas
+
+Inicia la sincronización masiva en segundo plano.
+
+**Endpoint:** `GET /api/sync/all-cards`
+
+**Respuesta (202 Accepted):**
+
+```json
+{
+  "message": "Sincronización masiva iniciada en segundo plano"
 }
 ```
 
 ---
 
-### 2. Buscar cartas por nombre
+### Sincronizar Precios Faltantes
 
-```http
-GET /api/cards/search
-```
+Sincroniza solo las cartas que no tienen precio.
 
-**Query Parameters:**
+**Endpoint:** `GET /api/sync/missing-prices`
 
-- `q` | `name` | `search` (string, requerido): Término de búsqueda (2-100 caracteres)
-- `limit` (number, opcional): Límite de resultados (default: 20)
-- `offset` (number, opcional): Offset (default: 0)
-
-**Ejemplo:**
-
-```bash
-curl "http://localhost:3000/api/cards/search?q=pikachu&limit=5"
-```
-
-**Respuesta (200 OK):**
+**Respuesta (202 Accepted):**
 
 ```json
 {
-  "success": true,
-  "data": [
-    {
-      "id": "base1-58",
-      "name": "Pikachu",
-      "set_name": "Base Set",
-      "last_price_usd": 15.0,
-      "last_price_eur": 13.5
-    }
-  ],
-  "count": 142,
-  "_cached": true
+  "message": "Sincronizacion de precios faltantes iniciada"
 }
 ```
 
 ---
 
-### 3. Filtrar cartas con múltiples criterios
+## 🃏 Cartas
 
-```http
-GET /api/cards/filter
-```
+### Buscar Cartas
+
+Busca cartas por nombre usando coincidencia parcial.
+
+**Endpoint:** `GET /api/cards/search`
 
 **Query Parameters:**
 
-- `name` (string): Búsqueda parcial por nombre
-- `setId` (string): ID del set (ej: `base1`)
-- `supertype` (string): Tipo superior (`Pokémon`, `Trainer`, `Energy`)
-- `rarity` (string): Rareza (`Common`, `Uncommon`, `Rare`, `Rare Holo`, etc.)
-- `minPrice` (number): Precio mínimo en EUR
-- `maxPrice` (number): Precio máximo en EUR
-- `currency` (string): Moneda para filtro de precio (`usd`, `eur`)
-- `limit` (number): Límite (default: 20)
-- `offset` (number): Offset (default: 0)
+| Parámetro | Tipo    | Requerido | Descripción          | Default |
+| --------- | ------- | --------- | -------------------- | ------- |
+| `q`       | string  | Sí        | Término de búsqueda  | -       |
+| `limit`   | integer | No        | Límite de resultados | 20      |
+| `offset`  | integer | No        | Offset paginación    | 0       |
 
-**Ejemplo:**
+**Validación:**
 
-```bash
-curl "http://localhost:3000/api/cards/filter?supertype=Pokémon&rarity=Rare%20Holo&minPrice=50&maxPrice=500&currency=usd"
-```
+- `q` debe tener mínimo 2 caracteres y máximo 100
+- `limit` entre 1 y 100
+- `offset` >= 0
+
+**Rate Limit:** 50 requests/5 minutos
 
 **Respuesta (200 OK):**
 
 ```json
 {
   "success": true,
+  "count": 15,
   "data": [
     {
       "id": "base1-4",
       "name": "Charizard",
+      "image_small": "https://...",
       "rarity": "Rare Holo",
-      "last_price_usd": 450.5
+      "last_price_eur": 450.0,
+      "last_price_usd": 495.0,
+      "set_name": "Base Set"
     }
-  ],
+  ]
+}
+```
+
+**Ejemplo:**
+
+```bash
+curl "http://localhost:3000/api/cards/search?q=pikachu&limit=10"
+```
+
+---
+
+### Filtrar Cartas
+
+Filtra cartas por múltiples criterios combinados.
+
+**Endpoint:** `GET /api/cards/filter`
+
+**Query Parameters:**
+
+| Parámetro   | Tipo    | Descripción                   |
+| ----------- | ------- | ----------------------------- |
+| `name`      | string  | Nombre (parcial)              |
+| `setId`     | string  | ID del set                    |
+| `rarity`    | string  | Rareza                        |
+| `supertype` | string  | Supertipo (Pokémon, Trainer)  |
+| `types`     | string  | Tipos separados por coma      |
+| `artist`    | string  | Nombre del artista            |
+| `minPrice`  | float   | Precio mínimo                 |
+| `maxPrice`  | float   | Precio máximo                 |
+| `currency`  | string  | Moneda (`eur` o `usd`)        |
+| `limit`     | integer | Límite (max 100)              |
+| `offset`    | integer | Offset paginación             |
+
+**Validación:**
+
+- `minPrice` >= 0
+- `maxPrice` >= minPrice
+- `currency` debe ser `eur` o `usd`
+
+**Respuesta (200 OK):**
+
+```json
+{
+  "success": true,
+  "count": 25,
   "filters": {
-    "supertype": "Pokémon",
     "rarity": "Rare Holo",
-    "minPrice": 50,
-    "maxPrice": 500,
-    "currency": "usd"
+    "minPrice": 10,
+    "maxPrice": 100,
+    "currency": "eur"
   },
-  "count": 24
+  "data": [
+    {
+      "id": "xy1-1",
+      "name": "Venusaur EX",
+      "rarity": "Rare Holo EX",
+      "last_price_eur": 45.5
+    }
+  ]
 }
 ```
-
----
-
-### 4. Obtener carta por ID
-
-```http
-GET /api/cards/:id
-```
-
-**Path Parameters:**
-
-- `id` (string): ID de la carta (formato: `setId-number`, ej: `base1-4`)
 
 **Ejemplo:**
 
 ```bash
-curl "http://localhost:3000/api/cards/base1-4"
+curl "http://localhost:3000/api/cards/filter?rarity=Rare&minPrice=10&maxPrice=50&currency=eur"
 ```
+
+---
+
+### Obtener Detalles de Carta
+
+Información completa de una carta incluyendo historial de precios.
+
+**Endpoint:** `GET /api/cards/:id`
+
+**Parámetros URL:**
+
+| Parámetro | Tipo   | Requerido | Descripción                    |
+| --------- | ------ | --------- | ------------------------------ |
+| `id`      | string | Sí        | ID de la carta (ej: "base1-4") |
+
+**Validación:** Formato `setId-number` (regex: `^[a-z0-9]+-[0-9]+$`)
 
 **Respuesta (200 OK):**
 
 ```json
 {
-  "success": true,
-  "data": {
-    "id": "base1-4",
-    "name": "Charizard",
-    "supertype": "Pokémon",
-    "subtypes": ["Stage 2"],
-    "hp": "120",
-    "types": ["Fire"],
-    "evolves_from": "Charmeleon",
-    "number": "4",
-    "artist": "Mitsuhiro Arita",
-    "rarity": "Rare Holo",
-    "set_id": "base1",
-    "set_name": "Base Set",
-    "set_series": "Base",
-    "release_date": "1999-01-09",
-    "image_url": "https://images.pokemontcg.io/base1/4_hires.png",
-    "tcgplayer_url": "https://prices.tcgplayer.com/pokemon/base-set/charizard-4",
-    "last_price_usd": 450.5,
-    "last_price_eur": 410.0,
-    "last_update": "2026-02-02T10:30:00Z"
-  }
+  "id": "base1-4",
+  "name": "Charizard",
+  "supertype": "Pokémon",
+  "subtypes": ["Stage 2"],
+  "types": ["Fire"],
+  "rarity": "Rare Holo",
+  "artist": "Mitsuhiro Arita",
+  "image_small": "https://...",
+  "image_large": "https://...",
+  "last_price_eur": 450.0,
+  "last_price_usd": 495.0,
+  "set": {
+    "id": "base1",
+    "name": "Base Set",
+    "series": "Base",
+    "release_date": "1999-01-09"
+  },
+  "priceHistory": [
+    {
+      "price_eur": 420.0,
+      "price_usd": 462.0,
+      "source": "aggregated",
+      "created_at": "2026-01-14T10:00:00Z"
+    }
+  ]
 }
 ```
 
-**Error (404 Not Found):**
+**Errores:**
 
 ```json
+// 400 - Formato inválido
 {
-  "success": false,
+  "error": "Formato de ID de carta inválido",
+  "example": "base1-4"
+}
+
+// 404 - No encontrada
+{
   "error": "Carta no encontrada"
 }
 ```
 
 ---
 
-### 5. Obtener estadísticas de una carta
+### Cartas Más Caras
 
-```http
-GET /api/cards/:id/stats
+**Endpoint:** `GET /api/cards/expensive`
+
+**Query Parameters:**
+
+| Parámetro  | Tipo    | Default | Descripción            |
+| ---------- | ------- | ------- | ---------------------- |
+| `limit`    | integer | 20      | Cantidad de resultados |
+| `currency` | string  | `eur`   | Moneda (`eur`, `usd`)  |
+
+**Respuesta (200 OK):**
+
+```json
+[
+  {
+    "id": "base1-4",
+    "name": "Charizard",
+    "image_small": "https://...",
+    "rarity": "Rare Holo",
+    "last_price_eur": 450.0,
+    "set_name": "Base Set"
+  }
+]
 ```
+
+---
+
+### Cartas Más Baratas
+
+**Endpoint:** `GET /api/cards/cheap`
+
+Similar a `/expensive` pero ordenadas ascendentemente.
+
+---
+
+### Tendencias de Precio (Subidas)
+
+**Endpoint:** `GET /api/cards/trending/price-increase`
+
+**Query Parameters:**
+
+| Parámetro | Tipo   | Default | Valores     |
+| --------- | ------ | ------- | ----------- |
+| `period`  | string | `24h`   | `24h`, `7d` |
+
+**Respuesta (200 OK):**
+
+```json
+[
+  {
+    "id": "swsh12-186",
+    "name": "Giratina VSTAR",
+    "last_price_eur": 85.0,
+    "old_price_eur": 65.0,
+    "change_percentage_eur": 30.77
+  }
+]
+```
+
+---
+
+### Tendencias de Precio (Bajadas)
+
+**Endpoint:** `GET /api/cards/trending/price-decrease`
+
+Similar a `/price-increase` pero con cambios negativos.
+
+---
+
+### Comparar Precios
+
+**Endpoint:** `GET /api/cards/compare`
+
+**Query Parameters:**
+
+| Parámetro | Tipo   | Requerido | Descripción                     |
+| --------- | ------ | --------- | ------------------------------- |
+| `ids`     | string | Sí        | IDs separados por coma (max 10) |
+
+**Validación:** Mínimo 2 cartas, máximo 10
+
+**Respuesta (200 OK):**
+
+```json
+[
+  {
+    "id": "base1-4",
+    "name": "Charizard",
+    "last_price_eur": 450.0,
+    "last_price_usd": 495.0
+  },
+  {
+    "id": "base1-2",
+    "name": "Blastoise",
+    "last_price_eur": 280.0,
+    "last_price_usd": 308.0
+  }
+]
+```
+
+**Ejemplo:**
+
+```bash
+curl "http://localhost:3000/api/cards/compare?ids=base1-4,base1-2,base1-15"
+```
+
+---
+
+### Rango de Precios
+
+**Endpoint:** `GET /api/cards/:id/price-range`
+
+**Query Parameters:**
+
+| Parámetro | Tipo    | Default | Descripción        |
+| --------- | ------- | ------- | ------------------ |
+| `days`    | integer | 30      | Días hacia atrás   |
 
 **Respuesta (200 OK):**
 
 ```json
 {
-  "success": true,
-  "data": {
-    "card_id": "base1-4",
-    "current_price_usd": 450.5,
-    "current_price_eur": 410.0,
-    "avg_price_30d_usd": 425.0,
-    "avg_price_30d_eur": 387.0,
-    "min_price_30d_usd": 380.0,
-    "max_price_30d_usd": 490.0,
-    "price_change_7d": "+5.2%",
-    "price_change_30d": "+12.8%",
-    "volatility": "medium"
+  "cardId": "base1-4",
+  "name": "Charizard",
+  "period_days": 30,
+  "price_range_eur": {
+    "min": 420.0,
+    "max": 480.0,
+    "avg": 445.5,
+    "current": 450.0
   }
 }
 ```
 
 ---
 
-## 📦 Sets (Colecciones)
+### Alerta de Precio
 
-### 1. Obtener todos los sets
-
-```http
-GET /api/sets
-```
+**Endpoint:** `GET /api/cards/:id/price-alert`
 
 **Query Parameters:**
 
-- `limit` (number): Límite de resultados (default: 20)
-- `offset` (number): Offset (default: 0)
-- `includeTotals` (boolean): Incluir totales de cartas (default: true)
+| Parámetro     | Tipo   | Requerido | Descripción                           |
+| ------------- | ------ | --------- | ------------------------------------- |
+| `targetPrice` | float  | Sí        | Precio objetivo                       |
+| `condition`   | string | No        | `below`, `above`, `equals` (default: below) |
+| `currency`    | string | No        | `eur`, `usd` (default: eur)           |
 
-**Ejemplo:**
+**Respuesta (200 OK):**
 
-```bash
-curl "http://localhost:3000/api/sets?limit=5"
+```json
+{
+  "alert": true,
+  "message": "El precio actual (€420.00) está por debajo del objetivo (€450.00)",
+  "currentPrice": 420.0,
+  "targetPrice": 450.0,
+  "currency": "eur"
+}
 ```
+
+---
+
+### Cartas de un Set
+
+**Endpoint:** `GET /api/cards/set/:set_id`
+
+**Respuesta (200 OK):**
+
+```json
+[
+  {
+    "id": "base1-1",
+    "name": "Alakazam",
+    "last_price_eur": 45.0
+  }
+]
+```
+
+---
+
+## 📦 Sets
+
+### Listar Todos los Sets
+
+**Endpoint:** `GET /api/sets`
+
+**Query Parameters:**
+
+| Parámetro | Tipo   | Default        | Valores                      |
+| --------- | ------ | -------------- | ---------------------------- |
+| `orderBy` | string | `release_date` | `release_date`, `name`, `series` |
 
 **Respuesta (200 OK):**
 
 ```json
 {
   "success": true,
+  "count": 150,
   "data": [
     {
       "id": "base1",
       "name": "Base Set",
       "series": "Base",
-      "release_date": "1999-01-09",
       "total": 102,
-      "logo_url": "https://images.pokemontcg.io/base1/logo.png",
-      "symbol_url": "https://images.pokemontcg.io/base1/symbol.png",
-      "cards_count": 102,
-      "avg_price_usd": 12.5
+      "release_date": "1999-01-09",
+      "symbol_url": "https://...",
+      "synced_cards": 102
     }
-  ],
-  "pagination": {
-    "limit": 5,
-    "offset": 0,
-    "total": 145
-  }
+  ]
 }
 ```
 
 ---
 
-### 2. Obtener set por ID
+### Detalles de un Set
 
-```http
-GET /api/sets/:setId
-```
-
-**Query Parameters:**
-
-- `includeCards` (boolean): Incluir todas las cartas del set (default: false)
-
-**Ejemplo:**
-
-```bash
-curl "http://localhost:3000/api/sets/base1?includeCards=true"
-```
+**Endpoint:** `GET /api/sets/:setId`
 
 **Respuesta (200 OK):**
 
@@ -345,13 +544,12 @@ curl "http://localhost:3000/api/sets/base1?includeCards=true"
     "id": "base1",
     "name": "Base Set",
     "series": "Base",
-    "release_date": "1999-01-09",
     "total": 102,
     "cards": [
       {
         "id": "base1-1",
         "name": "Alakazam",
-        "number": "1"
+        "rarity": "Rare Holo"
       }
     ]
   }
@@ -360,11 +558,9 @@ curl "http://localhost:3000/api/sets/base1?includeCards=true"
 
 ---
 
-### 3. Obtener estadísticas del set
+### Estadísticas de un Set
 
-```http
-GET /api/sets/:setId/stats
-```
+**Endpoint:** `GET /api/sets/:setId/stats`
 
 **Respuesta (200 OK):**
 
@@ -375,15 +571,10 @@ GET /api/sets/:setId/stats
     "set_id": "base1",
     "total_cards": 102,
     "avg_price_usd": 12.5,
-    "avg_price_eur": 11.3,
     "max_price_usd": 450.5,
-    "min_price_usd": 0.5,
     "cards_with_price": 98,
-    "cards_without_price": 4,
     "rarity_distribution": {
       "Common": 32,
-      "Uncommon": 31,
-      "Rare": 23,
       "Rare Holo": 16
     }
   }
@@ -392,52 +583,37 @@ GET /api/sets/:setId/stats
 
 ---
 
-### 4. Listar series únicas
+### Listar Series
 
-```http
-GET /api/sets/series
-```
+**Endpoint:** `GET /api/sets/series`
 
 **Respuesta (200 OK):**
 
 ```json
 {
   "success": true,
-  "data": ["Base", "Gym", "Neo", "Legendary Collection", "Sword & Shield"]
+  "data": ["Base", "Gym", "Neo", "Sword & Shield"]
 }
 ```
 
 ---
 
-### 5. Obtener sets por serie
+### Sets por Serie
 
-```http
-GET /api/sets/series/:name
-```
-
-**Ejemplo:**
-
-```bash
-curl "http://localhost:3000/api/sets/series/Base"
-```
+**Endpoint:** `GET /api/sets/series/:seriesName`
 
 **Respuesta (200 OK):**
 
 ```json
 {
   "success": true,
+  "count": 15,
   "data": [
     {
-      "id": "base1",
-      "name": "Base Set",
-      "series": "Base",
-      "release_date": "1999-01-09"
-    },
-    {
-      "id": "base2",
-      "name": "Jungle",
-      "series": "Base",
-      "release_date": "1999-06-16"
+      "id": "swsh1",
+      "name": "Sword & Shield",
+      "series": "Sword & Shield",
+      "total": 202
     }
   ]
 }
@@ -445,264 +621,73 @@ curl "http://localhost:3000/api/sets/series/Base"
 
 ---
 
-## 💰 Prices (Precios)
+## 💰 Precios
 
-### 1. Obtener historial de precios
+### Actualizar Precio Individual
 
-```http
-GET /api/prices/history/:cardId
-```
-
-**Query Parameters:**
-
-- `period` (string): Período de tiempo (`24h`, `7d`, `30d`, `1y`, default: `30d`)
-- `currency` (string): Moneda (`usd`, `eur`, `both`, default: `both`)
-
-**Ejemplo:**
-
-```bash
-curl "http://localhost:3000/api/prices/history/base1-4?period=7d&currency=usd"
-```
+**Endpoint:** `POST /api/prices/update/:cardId`
 
 **Respuesta (200 OK):**
 
 ```json
 {
-  "success": true,
-  "data": {
-    "card_id": "base1-4",
-    "period": "7d",
-    "currency": "usd",
-    "prices": [
-      {
-        "date": "2026-01-26",
-        "price_usd": 430.0,
-        "source": "aggregated"
-      },
-      {
-        "date": "2026-01-27",
-        "price_usd": 435.0,
-        "source": "aggregated"
-      }
-    ],
-    "stats": {
-      "current": 450.5,
-      "min": 430.0,
-      "max": 455.0,
-      "avg": 442.5,
-      "change": "+4.8%"
+  "message": "Precio actualizado correctamente",
+  "cardId": "base1-4",
+  "currentPrice": {
+    "priceUsd": 495.0,
+    "source": "tcgplayer"
+  }
+}
+```
+
+---
+
+### Actualizar Precio Agregado
+
+**Endpoint:** `POST /api/prices/update-aggregated/:cardId`
+
+**Respuesta (200 OK):**
+
+```json
+{
+  "message": "Precio agregado actualizado",
+  "cardId": "base1-4",
+  "averagePriceEur": 450.0,
+  "averagePriceUsd": 495.0,
+  "sourceCount": 2,
+  "sources": [
+    {
+      "source": "tcgplayer",
+      "priceUsd": 500.5
+    },
+    {
+      "source": "cardmarket",
+      "priceEur": 445.0
     }
-  }
+  ]
 }
 ```
 
 ---
 
-### 2. Obtener tendencia de precio
+### Estadísticas Sin Precio
 
-```http
-GET /api/prices/trend/:cardId
-```
+**Endpoint:** `GET /api/prices/without-price-stats`
 
 **Respuesta (200 OK):**
 
 ```json
 {
-  "success": true,
-  "data": {
-    "card_id": "base1-4",
-    "trend_7d": "up",
-    "trend_30d": "stable",
-    "momentum": "bullish",
-    "support_level": 420.0,
-    "resistance_level": 480.0
-  }
+  "total_cards": 156,
+  "first_attempt": 45,
+  "few_attempts": 78,
+  "avg_attempts": "2.8"
 }
 ```
 
 ---
 
-### 3. Actualizar precio de carta (TCGPlayer)
-
-```http
-POST /api/prices/update/:cardId
-```
-
-**Ejemplo:**
-
-```bash
-curl -X POST "http://localhost:3000/api/prices/update/base1-4"
-```
-
-**Respuesta (200 OK):**
-
-```json
-{
-  "success": true,
-  "message": "Precio actualizado",
-  "data": {
-    "card_id": "base1-4",
-    "price_usd": 450.5,
-    "price_eur": 410.0,
-    "source": "tcgplayer",
-    "updated_at": "2026-02-02T10:30:00Z"
-  }
-}
-```
-
----
-
-### 4. Actualizar precio agregado (Múltiples fuentes)
-
-```http
-POST /api/prices/update-aggregated/:cardId
-```
-
-**Respuesta (200 OK):**
-
-```json
-{
-  "success": true,
-  "data": {
-    "card_id": "base1-4",
-    "average_price_usd": 450.5,
-    "average_price_eur": 410.0,
-    "sources": [
-      {
-        "source": "tcgplayer",
-        "price_usd": 455.0,
-        "price_eur": 413.64
-      },
-      {
-        "source": "cardmarket",
-        "price_eur": 406.5,
-        "price_usd": 447.15
-      }
-    ],
-    "source_count": 2,
-    "updated_at": "2026-02-02T10:30:00Z"
-  }
-}
-```
-
----
-
-### 5. Obtener estadísticas de cartas sin precio
-
-```http
-GET /api/prices/without-price-stats
-```
-
-**Respuesta (200 OK):**
-
-```json
-{
-  "success": true,
-  "data": {
-    "total_cards": 156,
-    "first_attempt": 45,
-    "few_attempts": 78,
-    "many_attempts": 33,
-    "avg_attempts": 2.8
-  }
-}
-```
-
----
-
-## 🔄 Sync (Sincronización)
-
-### 1. Sincronizar todos los sets
-
-```http
-POST /api/sync/sets
-```
-
-**Respuesta (202 Accepted):**
-
-```json
-{
-  "success": true,
-  "message": "Sincronización de sets iniciada",
-  "taskId": "sync-sets-1234567890"
-}
-```
-
----
-
-### 2. Sincronizar cartas de un set
-
-```http
-POST /api/sync/cards/:setId
-```
-
-**Ejemplo:**
-
-```bash
-curl -X POST "http://localhost:3000/api/sync/cards/base1"
-```
-
-**Respuesta (200 OK):**
-
-```json
-{
-  "success": true,
-  "message": "102 cartas sincronizadas",
-  "set_id": "base1",
-  "cards_added": 0,
-  "cards_updated": 102
-}
-```
-
----
-
-### 3. Sincronizar precios faltantes
-
-```http
-POST /api/sync/prices-missing
-```
-
-**Query Parameters:**
-
-- `limit` (number): Límite de cartas a procesar (default: 100)
-
-**Respuesta (202 Accepted):**
-
-```json
-{
-  "success": true,
-  "message": "Sincronización de precios iniciada",
-  "total": 245,
-  "estimated_time": "12 minutos"
-}
-```
-
----
-
-### 4. Sincronizar todos los precios
-
-```http
-POST /api/sync/prices-all
-```
-
-⚠️ **Advertencia:** Proceso intensivo. Usar con moderación.
-
-**Respuesta (202 Accepted):**
-
-```json
-{
-  "success": true,
-  "message": "Sincronización completa iniciada",
-  "total_cards": 1524,
-  "estimated_time": "2 horas"
-}
-```
-
----
-
-## 🔐 Rate Limiting
-
-Todos los endpoints tienen límites de uso para proteger la API:
+## 🚦 Rate Limiting
 
 | Tipo de Endpoint | Límite       | Ventana    |
 | ---------------- | ------------ | ---------- |
@@ -711,7 +696,7 @@ Todos los endpoints tienen límites de uso para proteger la API:
 | Sincronización   | 10 requests  | 1 hora     |
 | Actualización    | 30 requests  | 5 minutos  |
 
-**Headers de respuesta:**
+**Headers:**
 
 ```
 RateLimit-Limit: 100
@@ -719,7 +704,7 @@ RateLimit-Remaining: 95
 RateLimit-Reset: 1675345200
 ```
 
-**Error (429 Too Many Requests):**
+**Error (429):**
 
 ```json
 {
@@ -733,15 +718,13 @@ RateLimit-Reset: 1675345200
 
 ## 💾 Cache
 
-La API implementa cache en 3 niveles:
+| Cache | TTL    | Endpoints              |
+| ----- | ------ | ---------------------- |
+| Corta | 5 min  | Búsquedas, filtros     |
+| Media | 30 min | Detalles, precios      |
+| Larga | 1 hora | Sets, estadísticas     |
 
-| Cache | TTL    | Endpoints                   |
-| ----- | ------ | --------------------------- |
-| Corta | 5 min  | Búsquedas, filtros          |
-| Media | 30 min | Detalles de cartas, precios |
-| Larga | 1 hora | Sets, series, estadísticas  |
-
-**Header de respuesta cacheada:**
+**Header cacheado:**
 
 ```json
 {
@@ -756,131 +739,108 @@ La API implementa cache en 3 niveles:
 
 ## ⚠️ Manejo de Errores
 
-### Códigos de Estado
+### Códigos HTTP
 
-- `200 OK` - Petición exitosa
-- `201 Created` - Recurso creado
-- `202 Accepted` - Proceso aceptado (asíncrono)
-- `400 Bad Request` - Parámetros inválidos
-- `404 Not Found` - Recurso no encontrado
-- `409 Conflict` - Conflicto (recurso duplicado)
-- `429 Too Many Requests` - Límite de rate excedido
-- `500 Internal Server Error` - Error del servidor
+| Código | Significado           |
+| ------ | --------------------- |
+| `200`  | OK                    |
+| `202`  | Accepted (async)      |
+| `400`  | Bad Request           |
+| `404`  | Not Found             |
+| `429`  | Too Many Requests     |
+| `500`  | Internal Server Error |
 
 ### Formato de Error
 
 ```json
 {
   "success": false,
-  "error": "Mensaje descriptivo del error",
+  "error": "Mensaje del error",
   "code": "ERROR_CODE",
   "details": {
     "field": "cardId",
-    "message": "Formato de ID inválido"
+    "message": "Formato inválido"
   }
 }
 ```
 
-### Validaciones Comunes
+### Validaciones
 
-**Formato de Card ID:**
+**Card ID:**
 
 ```
 ✅ base1-4
 ✅ xy1-10
 ❌ base14 (sin guión)
-❌ base1-abc (número inválido)
 ```
 
-**Rango de precios:**
+**Precios:**
 
 ```
 ✅ minPrice=0, maxPrice=1000
 ❌ minPrice=-10 (negativo)
-❌ minPrice=100, maxPrice=50 (min > max)
+❌ minPrice=100, maxPrice=50
 ```
 
 **Búsqueda:**
 
 ```
-✅ q=pikachu (2-100 caracteres)
+✅ q=pikachu (2-100 chars)
 ❌ q=a (muy corto)
-❌ q=<101 caracteres> (muy largo)
 ```
 
 ---
 
-## 🤖 Tareas Programadas (Cron Jobs)
+## 🤖 Tareas Programadas
 
-El sistema ejecuta sincronizaciones automáticas:
-
-| Tarea               | Frecuencia             | Descripción                  |
-| ------------------- | ---------------------- | ---------------------------- |
-| Sync Sets           | Diaria 3:00 AM         | Sincroniza nuevos sets       |
-| Sync Cards          | Cada 12h               | Actualiza cartas existentes  |
-| Hot Prices          | Cada hora              | Top 50 cartas populares      |
-| Normal Prices       | Cada 6h                | 100 cartas aleatorias        |
-| Retry Without Price | Semanal (Domingo 4 AM) | Reintentar cartas sin precio |
+| Tarea               | Frecuencia      | Descripción               |
+| ------------------- | --------------- | ------------------------- |
+| Sync Sets           | Diaria 3 AM     | Sincroniza sets           |
+| Sync Cards          | Cada 12h        | Actualiza cartas          |
+| Hot Prices          | Cada hora       | Top 50 populares          |
+| Normal Prices       | Cada 6h         | 100 aleatorias            |
+| Retry Without Price | Domingo 4 AM    | Reintentar sin precio     |
 
 ---
 
 ## 📊 Ejemplos de Uso
 
-### Flujo típico: Consultar precio de carta
+### Flujo: Consultar Precio
 
 ```bash
-# 1. Buscar carta por nombre
+# 1. Buscar carta
 curl "http://localhost:3000/api/cards/search?q=charizard"
 
-# 2. Obtener detalles completos
+# 2. Detalles completos
 curl "http://localhost:3000/api/cards/base1-4"
 
-# 3. Ver historial de precios
-curl "http://localhost:3000/api/prices/history/base1-4?period=30d"
-
-# 4. Actualizar precio si es necesario
+# 3. Actualizar precio
 curl -X POST "http://localhost:3000/api/prices/update-aggregated/base1-4"
+
+# 4. Alerta de precio
+curl "http://localhost:3000/api/cards/base1-4/price-alert?targetPrice=400&condition=below"
 ```
 
-### Flujo: Explorar colección
+### Flujo: Explorar Colección
 
 ```bash
-# 1. Listar todas las series
+# 1. Series
 curl "http://localhost:3000/api/sets/series"
 
-# 2. Ver sets de una serie
+# 2. Sets de serie
 curl "http://localhost:3000/api/sets/series/Base"
 
-# 3. Ver detalles del set
-curl "http://localhost:3000/api/sets/base1?includeCards=true"
+# 3. Detalles set
+curl "http://localhost:3000/api/sets/base1"
 
-# 4. Estadísticas del set
+# 4. Estadísticas
 curl "http://localhost:3000/api/sets/base1/stats"
 ```
 
-### Flujo: Filtrado avanzado
+### Filtrado Avanzado
 
 ```bash
-# Cartas Pokémon raras de más de $100
 curl "http://localhost:3000/api/cards/filter?supertype=Pokémon&rarity=Rare%20Holo&minPrice=100&currency=usd&sortBy=last_price_usd&sortOrder=desc"
-```
-
----
-
-## 🧪 Testing
-
-```bash
-# Todos los tests con cobertura
-npm test
-
-# Solo tests unitarios
-npm run test:unit
-
-# Solo tests de integración
-npm run test:integration
-
-# Watch mode
-npm run test:watch
 ```
 
 ---
@@ -889,55 +849,24 @@ npm run test:watch
 
 ### Agregación de Precios
 
-El sistema consulta **2 fuentes** simultáneamente:
+- **TCGPlayer** (USD) - Mercado US
+- **Cardmarket** (EUR) - Mercado EU
+- Promedio ponderado con conversión automática
 
-- **TCGPlayer** (USD) - Mercado estadounidense
-- **Cardmarket** (EUR) - Mercado europeo
+### Cartas Sin Precio
 
-El precio agregado es el **promedio ponderado** con conversión de moneda automática.
-
-### Cartas sin Precio
-
-Las cartas que fallan en obtener precio son marcadas y reintentadas después de 30 días para evitar sobrecarga de APIs.
+Marcadas y reintentadas después de 30 días.
 
 ### Cache Invalidation
 
-El cache se invalida automáticamente cuando:
+Automática al:
 
-- Se actualiza un precio
-- Se sincroniza una carta
-- Se añade/modifica un set
-
----
-
-## 🛠️ Herramientas de Desarrollo
-
-### Admin Endpoints
-
-```http
-GET /api/admin/health
-GET /api/admin/cache/stats
-GET /api/admin/scheduler/status
-POST /api/admin/cache/clear
-```
-
-### Logs
-
-```bash
-# Ver logs en tiempo real
-npm run dev
-
-# Logs de tareas programadas
-tail -f logs/scheduler.log
-```
-
----
-
-## 📞 Contacto y Soporte
-
-Para reportar problemas o sugerencias, consultar el repositorio del proyecto.
+- Actualizar precio
+- Sincronizar carta
+- Modificar set
 
 ---
 
 **Versión:** 1.0.0  
-**Última actualización:** 2 Febrero 2026
+**Última actualización:** 2 Febrero 2026  
+**Licencia:** MIT
