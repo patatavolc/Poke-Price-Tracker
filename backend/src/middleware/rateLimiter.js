@@ -26,3 +26,30 @@ export const apiLimiter = rateLimit({
     });
   },
 });
+
+/**
+ * Rate limiter estricto para endpoints de sincronización
+ * 10 requests por hora
+ */
+export const syncLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 hora
+  max: 10, // 10 requests
+  message: {
+    error: "Límite de sincronizaciones excedido",
+    message: "Solo puedes realizar 10 sincronizaciones por hora",
+  },
+  skipSuccessfulRequests: false,
+});
+
+/**
+ * Rate limiter para búsquedas
+ * 50 requests por 5 minutos
+ */
+export const searchLimiter = rateLimit({
+  windowMs: 5 * 60 * 1000, // 5 minutos
+  max: 50,
+  message: {
+    error: "Demasiadas búsquedas",
+    message: "Has realizado demasiadas búsquedas. Espera 5 minutos",
+  },
+});
