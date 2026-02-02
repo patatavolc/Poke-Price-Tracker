@@ -1,5 +1,5 @@
 import { syncPriceByCardId } from "../services/price/index.js";
-import { syncAggregatedPrice } from "../services/priceAggregator.service.js";
+import { syncAggregatedPrice } from "../services/price/sync.js";
 
 export const updatePrice = async (req, res) => {
   const { cardId } = req.params;

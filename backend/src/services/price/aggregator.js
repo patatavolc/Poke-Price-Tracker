@@ -200,7 +200,8 @@ export const getAggregatedPrice = async (cardId, cardName, setName = "") => {
     if (validPrices.length === 0) {
       console.log(`\n⚠ SIN PRECIOS DISPONIBLES DE NINGUNA FUENTE`);
       console.log(`${"=".repeat(80)}\n`);
-      return null;
+      // Retornar sourcesStatus para que se pueda registrar qué fuentes fallaron
+      return { sourcesStatus, hasPrice: false };
     }
 
     // Calcular precio promedio en EUR sumando todos los precios y dividiendo por el número de fuentes
@@ -225,6 +226,7 @@ export const getAggregatedPrice = async (cardId, cardName, setName = "") => {
       sources: validPrices,
       sourceCount: validPrices.length,
       sourcesStatus, // Añadido: estado detallado de cada fuente
+      hasPrice: true, // Flag para indicar que hay precios disponibles
     };
   } catch (error) {
     console.error(`\n❌ ERROR CRÍTICO en getAggregatedPrice:`);

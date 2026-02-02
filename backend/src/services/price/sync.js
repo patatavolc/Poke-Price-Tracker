@@ -15,7 +15,12 @@
 import { query } from "../../config/db.js";
 import { getAggregatedPrice } from "./aggregator.js";
 import { sleep } from "./utils.js";
-import { isCardWithoutPrice, getWithoutPriceStats } from "./tracking.js";
+import {
+  isCardWithoutPrice,
+  getWithoutPriceStats,
+  markCardWithoutPrice,
+  removeCardWithoutPrice,
+} from "./cardsWithoutPrice.service.js";
 
 /**
  * Sincroniza el precio agregado de una carta individual
@@ -54,8 +59,17 @@ export const syncAggregatedPrice = async (cardId) => {
 
     const priceData = await getAggregatedPrice(cardId, name, setName);
 
-    if (!priceData) {
+    // Verificar si no hay precios disponibles
+    if (!priceData || priceData.hasPrice === false) {
       console.log(`⚠️ No se encontraron precios para ${name}`);
+
+      // Marcar la carta como sin precio disponible
+      await markCardWithoutPrice(
+        cardId,
+        "No hay precios disponibles en ninguna fuente",
+        priceData?.sourcesStatus || {},
+      );
+
       return null;
     }
 
@@ -71,6 +85,15 @@ export const syncAggregatedPrice = async (cardId) => {
       );
       console.log(
         `  ✅ Guardado precio de ${source.source}: €${source.priceEur.toFixed(2)} / $${source.priceUsd}`,
+      );
+    }
+
+    // Si la carta tenía precios ahora, eliminarla de la lista de cartas sin precio
+    const wasWithoutPrice = await isCardWithoutPrice(cardId);
+    if (wasWithoutPrice) {
+      await removeCardWithoutPrice(cardId);
+      console.log(
+        `  🔄 Carta removida de lista sin precio (ahora tiene precio)`,
       );
     }
 

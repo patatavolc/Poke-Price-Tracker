@@ -25,7 +25,7 @@ export async function markCardWithoutPrice(
       VALUES ($1, $2, $3)
       ON CONFLICT (card_id)
       DO UPDATE SET
-        last_attempt = NOW()
+        last_attempt = NOW(),
         attempt_count = cards_without_price.attempt_count + 1,
         last_error = EXCLUDED.last_error,
         source_failures = EXCLUDED.source_failures
@@ -39,7 +39,7 @@ export async function markCardWithoutPrice(
     ]);
 
     console.log(
-      `Carta ${cardId} marcada como sin precio (intento #${result.rows[0].attempt_count})`,
+      `📋 Carta ${cardId} marcada como sin precio (intento #${result.rows[0].attempt_count})`,
     );
     return result.rows[0];
   } catch (error) {
@@ -78,13 +78,13 @@ export async function isCardWithoutPrice(cardId) {
 export async function getCardsWithoutPrice(minAttempts = 2) {
   try {
     const queryText = `
-      SELECCT card_id, attempt_count, last_attempt, last_error
+      SELECT card_id, attempt_count, last_attempt, last_error
       FROM cards_without_price
       WHERE attempt_count >= $1
       ORDER BY last_attempt DESC
     `;
 
-    const result = await query(query, [minAttempts]);
+    const result = await query(queryText, [minAttempts]);
     return result.rows;
   } catch (error) {
     console.error("Error obteniendo cartas sin precio:", error.message);

@@ -1,7 +1,7 @@
 import cron from "node-cron";
 import { query } from "../config/db.js";
 import { syncSetsFromAPI, syncAllCards } from "../services/pokemon.service.js";
-import { syncAggregatedPrice } from "../services/priceAggregator.service.js";
+import { syncAggregatedPrice } from "../services/price/sync.js";
 
 /**
  * Sincroniza sets cada 24 horas (a las 3 AM)
@@ -151,7 +151,7 @@ export const fillInitialPrices = async (batchSize = 100) => {
           WHERE ph.id IS NULL
           LIMIT $1
           `,
-        [batchSize]
+        [batchSize],
       );
 
       if (cards.length === 0) break;
@@ -159,7 +159,7 @@ export const fillInitialPrices = async (batchSize = 100) => {
       console.log(
         `\n Lote ${Math.floor(processedCount / batchSize) + 1}: Procesando ${
           cards.length
-        } cartas...`
+        } cartas...`,
       );
 
       for (const card of cards) {
@@ -172,7 +172,7 @@ export const fillInitialPrices = async (batchSize = 100) => {
           if (successCount % 10 === 0) {
             const percentage = ((processedCount / totalCards) * 100).toFixed(1);
             console.log(
-              `Progreso: ${processedCount}/${totalCards} (${percentage}%)`
+              `Progreso: ${processedCount}/${totalCards} (${percentage}%)`,
             );
           }
         } catch (error) {
@@ -185,7 +185,7 @@ export const fillInitialPrices = async (batchSize = 100) => {
         await new Promise((resolve) => setTimeout(resolve, 100));
       }
       console.log(
-        `Lote completado: ${successCount} exitosos, ${errorCount} errores`
+        `Lote completado: ${successCount} exitosos, ${errorCount} errores`,
       );
     }
 
@@ -211,15 +211,15 @@ export const fillInitialPrices = async (batchSize = 100) => {
  * Inicia todas las tareas programadas
  * @param {boolean} fillPricesFirst - Si es true, llena los precios antes de iniciar los cron jobs
  */
-export const startAllSchedulers =async (fillPricesFirst = false) => {
+export const startAllSchedulers = async (fillPricesFirst = false) => {
   console.log("\n Iniciando sistema de tareas programadas...\n");
 
   //Llenar precios iniciales si se solicita
-  if(fillPricesFirst){
+  if (fillPricesFirst) {
     try {
       await fillInitialPrices(50); // Lotes de 50 cartas
       console.log("Esperando 10 segundos...\n");
-      await new Promise(resolve => setTimeout(resolve, 10000))
+      await new Promise((resolve) => setTimeout(resolve, 10000));
     } catch (error) {
       console.error("Error llenando precios, Continuando con schedulers... \n");
     }

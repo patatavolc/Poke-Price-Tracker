@@ -63,7 +63,7 @@ CREATE TABLE IF NOT EXISTS cards_without_price (
   card_id VARCHAR(50) PRIMARY KEY REFERENCES cards(id) ON DELETE CASCADE,
   last_attempt TIMESTAMP WITH TIME ZONE DEFAULT current_timestamp,
   attempt_count INTEGER DEFAULT 1,
-  las_error TEXT,
+  last_error TEXT,
   source_failures JSONB DEFAULT '{}',
   created_at TIMESTAMP WITH TIME ZONE DEFAULT current_timestamp
 );
