@@ -142,3 +142,21 @@ export const getCacheStats = () => {
     },
   };
 };
+
+// Middleware para invalidar cache despues de mutaciones
+export const invalidateCacheAfter = (pattern) => {
+  return (req, res, next) => {
+    // Guardar la funcion original
+    const originalJson = res.json.bind(res);
+
+    // Sobrescribir para invalidar cache despues
+    res.json = function (data) {
+      if (res.statusCode >= 200 && res.statusCode < 300) {
+        clearCacheByPattern(pattern);
+      }
+      return originalJson(data);
+    };
+
+    next();
+  };
+};
