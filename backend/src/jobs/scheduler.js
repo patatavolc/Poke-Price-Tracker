@@ -174,3 +174,11 @@ export function stopAllSchedulers() {
   scheduler.stop();
 }
 
+/**
+ * Ontiene el estado del scheduler
+ */
+export function getSchedulerStatus() {
+  return scheduler.getStatus();
+}
+
+export default scheduler;
