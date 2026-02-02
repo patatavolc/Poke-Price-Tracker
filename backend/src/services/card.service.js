@@ -34,7 +34,7 @@ export const getCardPriceService = async (id) => {
 
 export const getCardsFromSetService = async (set_id) => {
   const queryText =
-    "SELECT id, name, last_price_eur, last_price_use FROM cards WHERE set_id = $1";
+    "SELECT id, name, last_price_eur, last_price_usd FROM cards WHERE set_id = $1";
 
   const res = await query(queryText, [set_id]);
 
@@ -209,10 +209,10 @@ export const checkPriceAlertService = async (
     ${priceColumn} as current_price,
     image_small
   FROM cards
-  WHERE i = $1
+  WHERE id = $1
   `;
 
-  const res = await query(query, [cardId]);
+  const res = await query(queryText, [cardId]);
 
   if (res.rows.length === 0) {
     return null;

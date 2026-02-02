@@ -15,6 +15,12 @@
 import { query } from "../../config/db.js";
 import { getAggregatedPrice } from "./aggregator.js";
 import { sleep } from "./utils.js";
+import {
+  isCardWithoutPrice,
+  getWithoutPriceStats,
+  markCardWithoutPrice,
+  removeCardWithoutPrice,
+} from "./cardsWithoutPrice.service.js";
 
 /**
  * Sincroniza el precio agregado de una carta individual
@@ -53,8 +59,17 @@ export const syncAggregatedPrice = async (cardId) => {
 
     const priceData = await getAggregatedPrice(cardId, name, setName);
 
-    if (!priceData) {
+    // Verificar si no hay precios disponibles
+    if (!priceData || priceData.hasPrice === false) {
       console.log(`⚠️ No se encontraron precios para ${name}`);
+
+      // Marcar la carta como sin precio disponible
+      await markCardWithoutPrice(
+        cardId,
+        "No hay precios disponibles en ninguna fuente",
+        priceData?.sourcesStatus || {},
+      );
+
       return null;
     }
 
@@ -70,6 +85,15 @@ export const syncAggregatedPrice = async (cardId) => {
       );
       console.log(
         `  ✅ Guardado precio de ${source.source}: €${source.priceEur.toFixed(2)} / $${source.priceUsd}`,
+      );
+    }
+
+    // Si la carta tenía precios ahora, eliminarla de la lista de cartas sin precio
+    const wasWithoutPrice = await isCardWithoutPrice(cardId);
+    if (wasWithoutPrice) {
+      await removeCardWithoutPrice(cardId);
+      console.log(
+        `  🔄 Carta removida de lista sin precio (ahora tiene precio)`,
       );
     }
 
@@ -112,14 +136,22 @@ export const syncAggregatedPrice = async (cardId) => {
  */
 export const syncMissingPrices = async (dailyLimit = null) => {
   try {
-    // Buscar todas las cartas que no tienen precio (last_price_usd o last_price_eur es NULL)
     console.log("\nBuscando cartas sin precio en la base de datos...");
 
-    let queryStr =
-      "SELECT id, name FROM cards WHERE last_price_usd IS NULL OR last_price_eur IS NULL ORDER BY id";
+    // Excluir cartas marcadas como sin precio
+    let queryStr = `
+      SELECT id, name 
+      FROM cards 
+      WHERE (last_price_usd IS NULL OR last_price_eur IS NULL)
+        AND id NOT IN (
+          SELECT card_id 
+          FROM cards_without_price 
+          WHERE attempt_count >= 2
+        )
+      ORDER BY id
+    `;
     const queryParams = [];
 
-    // Aplicar límite si se especificó (útil para procesamiento gradual)
     if (dailyLimit !== null) {
       queryStr += " LIMIT $1";
       queryParams.push(dailyLimit);
@@ -128,7 +160,21 @@ export const syncMissingPrices = async (dailyLimit = null) => {
     const { rows: cards } = await query(queryStr, queryParams);
 
     if (cards.length === 0) {
-      console.log("✅ Todas las cartas tienen precios sincronizados");
+      console.log(
+        "✅ Todas las cartas disponibles tienen precios sincronizados",
+      );
+
+      // Mostrar estadísticas de cartas sin precio
+      const stats = await getWithoutPriceStats();
+      if (stats && parseInt(stats.total_cards) > 0) {
+        console.log(`\n📊 CARTAS SIN PRECIO DISPONIBLE:`);
+        console.log(`   Total: ${stats.total_cards}`);
+        console.log(`   Primer intento: ${stats.first_attempt}`);
+        console.log(`   Pocos intentos (2-5): ${stats.few_attempts}`);
+        console.log(`   Muchos intentos (>5): ${stats.many_attempts}`);
+        console.log(`   Promedio intentos: ${stats.avg_attempts}`);
+      }
+
       return { success: true, total: 0 };
     }
 
@@ -136,15 +182,27 @@ export const syncMissingPrices = async (dailyLimit = null) => {
     if (dailyLimit) {
       console.log(`LÍMITE: Procesando máximo ${dailyLimit} cartas`);
     }
+
+    // Mostrar cartas que se están skipeando
+    const { rows: skippedCards } = await query(`
+      SELECT COUNT(*) as count 
+      FROM cards_without_price 
+      WHERE attempt_count >= 2
+    `);
+    if (parseInt(skippedCards[0].count) > 0) {
+      console.log(
+        `⏭️  Skipeando ${skippedCards[0].count} cartas sin precio confirmado`,
+      );
+    }
+
     console.log("Iniciando sincronización de precios faltantes...");
     console.log(
       `Tiempo estimado: ~${Math.ceil((cards.length * 2.5) / 60)} minutos\n`,
     );
 
-    // Contadores para estadísticas finales
-    let successCount = 0; // Cartas con precio obtenido exitosamente
-    let skippedCount = 0; // Cartas sin precio disponible en ninguna fuente
-    let failCount = 0; // Cartas que generaron error durante el proceso
+    let successCount = 0;
+    let skippedCount = 0;
+    let failCount = 0;
     const startTime = Date.now();
 
     for (let i = 0; i < cards.length; i++) {
@@ -170,25 +228,20 @@ export const syncMissingPrices = async (dailyLimit = null) => {
           console.log(`\n⚠ Omitida - Total omitidas: ${skippedCount}`);
         }
 
-        // Delay entre peticiones para no sobrecargar las APIs
-        // 2.5 segundos es un balance entre velocidad y respeto a los rate limits
         if (i < cards.length - 1) {
           console.log(`\nEsperando 2.5s antes de la siguiente carta...`);
           await sleep(2500);
         }
       } catch (error) {
-        // Incrementar contador de errores pero continuar con la siguiente carta
         failCount++;
         console.error(`\n❌ ERROR - Carta ${card.id}: ${error.message}`);
         console.error(`❌ Total errores: ${failCount}`);
-        // Delay más largo después de un error para permitir recuperación
         console.log(`\nEsperando 3s antes de continuar...`);
         await sleep(3000);
         continue;
       }
     }
 
-    // Calcular estadísticas finales para el reporte
     const endTime = Date.now();
     const totalTime = Math.floor((endTime - startTime) / 1000);
     const successRate = ((successCount / cards.length) * 100).toFixed(1);
@@ -209,6 +262,15 @@ export const syncMissingPrices = async (dailyLimit = null) => {
     console.log(
       `   Promedio por carta: ${(totalTime / cards.length).toFixed(1)}s`,
     );
+
+    // Mostrar estadísticas actualizadas
+    const finalStats = await getWithoutPriceStats();
+    if (finalStats && parseInt(finalStats.total_cards) > 0) {
+      console.log(`\n📊 CARTAS SIN PRECIO (ACTUALIZADO):`);
+      console.log(`   Total registradas: ${finalStats.total_cards}`);
+      console.log(`   Promedio intentos: ${finalStats.avg_attempts}`);
+    }
+
     console.log(`\n${"=".repeat(80)}\n`);
 
     return {

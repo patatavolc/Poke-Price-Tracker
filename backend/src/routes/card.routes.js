@@ -25,27 +25,4 @@ router.get("/:id/price-range", getPriceRange);
 router.get("/:id/price-alert", checkPriceAlert);
 router.get("/compare", compareCardPrices);
 
-/**
- * TODO:
- * Cartas con mayor subida de precio (Ultimas 24h, 7d)
- * GET /cards/trending/price-increase
- *
- * Cartas con mayor bajada de precio
- * GET /cards/trending/price-decrease
- *
- * Cartas mas caras del mercado
- * GET /cards/expensive
- *
- * Cartas mas baratas
- * GET /cards/cheap
- *
- * Rangos de precios (min/max) en un periodo
- * GET /cards/:id/price-range?days=30
- *
- * Verificar si el precio esta por debajo del umbral
- * GET /cards/:id/price-alert_threshold=50
- *
- * Comparar precios de multiples cartas
- * GET /cards/compare?ids=id1,id2,id3
- */
 export default router;

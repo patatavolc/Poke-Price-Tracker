@@ -59,6 +59,15 @@ CREATE TABLE user_cards (
   obtained_at TIMESTAMP WITH TIME ZONE DEFAULT current_timestamp
 );
 
+CREATE TABLE IF NOT EXISTS cards_without_price (
+  card_id VARCHAR(50) PRIMARY KEY REFERENCES cards(id) ON DELETE CASCADE,
+  last_attempt TIMESTAMP WITH TIME ZONE DEFAULT current_timestamp,
+  attempt_count INTEGER DEFAULT 1,
+  last_error TEXT,
+  source_failures JSONB DEFAULT '{}',
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT current_timestamp
+);
+
 -- Indice para buscar todas las cartas de un set especifico
 CREATE INDEX idx_cards_set_id ON cards(set_id);
 
@@ -83,6 +92,13 @@ CREATE INDEX idx_price_history_created_at ON price_history(created_at DESC);
 
 -- Indice para optimizar la busqueda de una carta especifica dentro de la coleccion de un usuario
 CREATE UNIQUE INDEX idx_user_card_unique ON user_cards(user_id, card_id);
+
+-- Indice para buscar cartas por fecha de ultimo intento
+CREATE INDEX idx_cards_without_price_last_attempt ON cards_without_price(last_attempt);
+
+-- Indice para contar intentos
+CREATE INDEX idx_cards_without_price_attempt_count ON cards_without_price(attempt_count);
+
 
 -- Actualizar el precio actual automaticamente
 CREATE OR REPLACE FUNCTION update_last_card_price()

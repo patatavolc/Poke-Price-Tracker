@@ -5,8 +5,9 @@ import { query } from "./src/config/db.js";
 import mainRouter from "./src/routes/mainRouter.js";
 import {
   startAllSchedulers,
-  fillInitialPrices,
-} from "./src/jobs/scheduler.cron.js";
+  getSchedulerStatus,
+} from "./src/jobs/scheduler.js";
+import { fillInitialPrices } from "./src/jobs/utils/fillInitialPrices.js";
 
 dotenv.config();
 
@@ -35,20 +36,31 @@ app.post("/api/admin/fill-prices", async (req, res) => {
   }
 });
 
-// Prueba de conexion a Supabase
+// Endpoint para ver estado del scheduler
+app.get("/api/admin/scheduler-status", (req, res) => {
+  try {
+    const status = getSchedulerStatus();
+    res.json(status);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Prueba de conexión a Supabase
 async function testDbConnection() {
   try {
     const res = await query("SELECT NOW()");
-    console.log("Conexion a Supabase exitosa:", res.rows[0].now);
+    console.log("✅ Conexión a Supabase exitosa:", res.rows[0].now);
   } catch (error) {
-    console.error("Error conectando a la base de datos:", error.message);
+    console.error("❌ Error conectando a la base de datos:", error.message);
   }
 }
 
 testDbConnection();
 
+// Iniciar schedulers (false = no llenar precios al iniciar)
 startAllSchedulers(false);
 
 app.listen(PORT, () => {
-  console.log("Servidor corriendo en el puerto", PORT);
+  console.log(`🚀 Servidor corriendo en el puerto ${PORT}`);
 });
