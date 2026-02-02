@@ -53,3 +53,40 @@ export const searchLimiter = rateLimit({
     message: "Has realizado demasiadas búsquedas. Espera 5 minutos",
   },
 });
+
+/**
+ * Rate limiter para endpoints administrativos
+ * 20 requests por hora
+ */
+export const adminLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 hora
+  max: 20,
+  message: {
+    error: "Límite de operaciones administrativas excedido",
+    message: "Solo 20 operaciones administrativas por hora",
+  },
+});
+
+/**
+ * Speed limiter - ralentiza requests progresivamente
+ * Después de 50 requests, empieza a agregar delays
+ */
+export const speedLimiter = slowDown({
+  windowMs: 15 * 60 * 1000, // 15 minutos
+  delayAfter: 50, // Después de 50 requests, empezar a ralentizar
+  delayMs: 500, // Agregar 500ms de delay por cada request sobre el límite
+  maxDelayMs: 5000, // Máximo delay de 5 segundos
+});
+
+/**
+ * Rate limiter muy permisivo para consultas públicas
+ * 200 requests por 15 minutos
+ */
+export const publicLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 200,
+  message: {
+    error: "Límite temporal excedido",
+    message: "Demasiadas consultas, intenta en 15 minutos",
+  },
+});
