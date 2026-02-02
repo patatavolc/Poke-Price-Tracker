@@ -104,3 +104,73 @@ class SchedulerManager {
     };
   }
 }
+
+const scheduler = new SchedulerManager();
+
+/**
+ * Configura e inicia todas las tareas programadas
+ */
+export async function startAllSchedulers(fillPricesFirst = false) {
+  console.log("\n CONFIGURANDO TAREAS PROGRAMADAS...\n");
+
+  // Llenado inicial de precios (opcional)
+  if (fillPricesFirst || INITIAL_FILL_CONFIG.enabled) {
+    try {
+      console.log("🔄 Ejecutando llenado inicial de precios...");
+      await fillInitialPrices(INITIAL_FILL_CONFIG.batchSize);
+      console.log("✅ Llenado inicial completado\n");
+      await new Promise((resolve) => setTimeout(resolve, 5000));
+    } catch (error) {
+      console.error("❌ Error en llenado inicial:", error.message);
+      console.log("⏭️  Continuando con schedulers...\n");
+    }
+  }
+
+  // Regsitrar tareas
+  scheduler.register(
+    "SYNC_SETS",
+    SCHEDULES.SYNC_SETS.cron,
+    syncSetsTask,
+    SCHEDULES.SYNC_SETS.enabled,
+  );
+
+  scheduler.register(
+    "SYNC_CARDS",
+    SCHEDULES.SYNC_CARDS.cron,
+    syncCardsTask,
+    SCHEDULES.SYNC_CARDS.enabled,
+  );
+
+  scheduler.register(
+    "UPDATE_HOT_PRICES",
+    SCHEDULES.UPDATE_HOT_PRICES.cron,
+    () => updateHotPricesTask(SCHEDULES.UPDATE_HOT_PRICES.batchSize),
+    SCHEDULES.UPDATE_HOT_PRICES.enabled,
+  );
+
+  scheduler.register(
+    "UPDATE_NORMAL_PRICES",
+    SCHEDULES.UPDATE_NORMAL_PRICES.cron,
+    () => updateNormalPricesTask(SCHEDULES.UPDATE_NORMAL_PRICES.batchSize),
+    SCHEDULES.UPDATE_NORMAL_PRICES.enabled,
+  );
+
+  scheduler.register(
+    "RETRY_WITHOUT_PRICE",
+    SCHEDULES.RETRY_WITHOUT_PRICE.cron,
+    () => retryWithoutPriceTask(SCHEDULES.RETRY_WITHOUT_PRICE.olderThanDays),
+    SCHEDULES.RETRY_WITHOUT_PRICE.enabled,
+  );
+
+  scheduler.start();
+
+  return scheduler;
+}
+
+/**
+ * Detiene el scheduler
+ */
+export function stopAllSchedulers() {
+  scheduler.stop();
+}
+
