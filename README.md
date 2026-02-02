@@ -18,16 +18,14 @@ Una aplicación completa para el seguimiento de precios de cartas del Pokémon T
 
 - [Características](#-características)
 - [Capturas de Pantalla](#-capturas-de-pantalla)
+- [Instalación y Configuración](#-instalación-y-configuración)
+- [Cómo Usar](#-cómo-usar)
 - [Arquitectura del Proyecto](#-arquitectura-del-proyecto)
 - [Stack Tecnológico](#-stack-tecnológico)
 - [Estructura del Proyecto](#-estructura-del-proyecto)
-- [Instalación](#-instalación)
-- [Configuración](#%EF%B8%8F-configuración)
 - [API Endpoints](#-api-endpoints)
 - [Tareas Programadas](#-tareas-programadas)
-- [Esquema de Base de Datos](#%EF%B8%8F-esquema-de-base-de-datos)
 - [Ramas del Proyecto](#-ramas-del-proyecto)
-- [Guía de Desarrollo](#-guía-de-desarrollo)
 - [Licencia](#-licencia)
 
 ---
@@ -181,37 +179,210 @@ Poke-Price-Tracker/
 
 ---
 
+## � Instalación y Configuración
+
+### Requisitos Previos
+
+- **Node.js** v18 o superior
+- **PostgreSQL** 13+ (recomendado: Supabase)
+- **npm** o **yarn**
+- Cuenta en [Pokémon TCG API](https://dev.pokemontcg.io/) (para obtener API key)
+
+### 1. Clonar el Repositorio
+
+```bash
+git clone <url-del-repositorio>
+cd Poke-Price-Tracker
+```
+
+### 2. Configurar la Base de Datos
+
+#### Opción A: Usar Supabase (Recomendado)
+
+1. Crea una cuenta en [Supabase](https://supabase.com/)
+2. Crea un nuevo proyecto
+3. Ve a **SQL Editor** en el panel de Supabase
+4. Ejecuta el script `backend/src/config/schema.sql` completo
+5. Guarda las credenciales de conexión (las necesitarás en el paso 3)
+
+#### Opción B: PostgreSQL Local
+
+```bash
+# Instalar PostgreSQL (Ubuntu/Debian)
+sudo apt-get install postgresql postgresql-contrib
+
+# Crear base de datos
+sudo -u postgres createdb pokemon_price_tracker
+
+# Ejecutar schema
+sudo -u postgres psql pokemon_price_tracker < backend/src/config/schema.sql
+```
+
+### 3. Configurar el Backend
+
+```bash
+cd backend
+
+# Instalar dependencias
+npm install
+
+# Crear archivo .env
+cp .env.example .env
+```
+
+Edita el archivo `.env` con tus credenciales:
+
+```env
+# Database (Supabase PostgreSQL)
+DB_HOST=aws-0-eu-central-1.pooler.supabase.com
+DB_PORT=5432
+DB_NAME=postgres
+DB_USER=postgres.xxxxxxxxxxxxx
+DB_PASSWORD=tu_password_de_supabase
+
+# APIs Externas
+POKEMON_TCG_API_KEY=tu_api_key_aqui
+POKEMON_TCG_API_URL=https://api.pokemontcg.io/v2
+TCGDEX_API_URL=https://api.tcgdex.net/v2/en
+
+# Servidor
+PORT=3000
+NODE_ENV=development
+```
+
+**Obtener API Key de Pokémon TCG:**
+
+1. Visita [https://dev.pokemontcg.io/](https://dev.pokemontcg.io/)
+2. Regístrate gratuitamente
+3. Copia tu API key y pégala en el `.env`
+
+### 4. Iniciar el Backend
+
+```bash
+# Modo desarrollo (con nodemon)
+npm run dev
+
+# O en modo producción
+npm start
+```
+
+El servidor estará disponible en `http://localhost:3000`
+
+### 5. Sincronización Inicial de Datos
+
+Una vez el backend esté corriendo, ejecuta estos comandos para poblar la base de datos:
+
+```bash
+# 1. Sincronizar sets de cartas
+curl http://localhost:3000/api/sync/sets
+
+# 2. Sincronizar cartas de un set específico (ejemplo: Base Set)
+curl http://localhost:3000/api/sync/cards/base1
+
+# 3. Sincronizar todas las cartas (proceso largo)
+curl http://localhost:3000/api/sync/all-cards
+
+# 4. Actualizar precios (después de tener cartas)
+curl -X POST "http://localhost:3000/api/prices/update-aggregated/base1-4"
+```
+
+### 6. Configurar el Frontend (Opcional)
+
+```bash
+cd ../frontend
+
+# Instalar dependencias
+npm install
+
+# Configurar variables de entorno
+echo "NEXT_PUBLIC_API_URL=http://localhost:3000" > .env.local
+
+# Iniciar en modo desarrollo
+npm run dev
+```
+
+El frontend estará disponible en `http://localhost:3001`
+
+---
+
 ## 📡 API Endpoints
 
-### Sincronización
+Para ver la documentación completa del API, consulta [API_DOCUMENTATION.md](backend/API_DOCUMENTATION.md).
 
-| Método | Endpoint                 | Descripción                                         |
-| ------ | ------------------------ | --------------------------------------------------- |
-| `GET`  | `/api/sync/sets`         | Sincroniza todos los sets de cartas                 |
-| `GET`  | `/api/sync/cards/:setId` | Sincroniza cartas de un set específico              |
-| `GET`  | `/api/sync/all-cards`    | Sincroniza todas las cartas (proceso en background) |
+### Principales Endpoints
 
-### Cartas
+#### Sincronización
 
-| Método | Endpoint                | Descripción                                            |
-| ------ | ----------------------- | ------------------------------------------------------ |
-| `GET`  | `/api/card/:id`         | Obtiene detalles de una carta con historial de precios |
-| `GET`  | `/api/cards`            | Lista todas las cartas                                 |
-| `GET`  | `/api/cards/set/:setId` | Obtiene cartas de un set específico                    |
+| Método | Endpoint                 | Descripción                 |
+| ------ | ------------------------ | --------------------------- |
+| `GET`  | `/api/sync/sets`         | Sincroniza todos los sets   |
+| `GET`  | `/api/sync/cards/:setId` | Sincroniza cartas de un set |
+| `GET`  | `/api/sync/all-cards`    | Sincroniza todas las cartas |
 
-### Precios
+#### Cartas
 
-| Método | Endpoint                                | Descripción                    |
-| ------ | --------------------------------------- | ------------------------------ |
-| `POST` | `/api/prices/update/:cardId`            | Actualiza precio de una fuente |
-| `POST` | `/api/prices/update-aggregated/:cardId` | Actualiza precio agregado      |
-| `GET`  | `/api/prices/history/:cardId`           | Obtiene historial de precios   |
+| Método | Endpoint               | Descripción                     |
+| ------ | ---------------------- | ------------------------------- |
+| `GET`  | `/api/cards/search?q=` | Buscar cartas por nombre        |
+| `GET`  | `/api/cards/:id`       | Detalles de carta con historial |
+| `GET`  | `/api/cards/filter`    | Filtrar por múltiples criterios |
 
-### Administración
+#### Precios
 
-| Método | Endpoint                           | Descripción                              |
-| ------ | ---------------------------------- | ---------------------------------------- |
-| `POST` | `/api/admin/fill-prices?batch=100` | Llena precios iniciales (batch opcional) |
+| Método | Endpoint                                | Descripción               |
+| ------ | --------------------------------------- | ------------------------- |
+| `POST` | `/api/prices/update-aggregated/:cardId` | Actualiza precio agregado |
+| `GET`  | `/api/cards/:id/price-range`            | Rango de precios          |
+
+---
+
+## 💡 Cómo Usar
+
+### Consultar Precios de una Carta
+
+```bash
+# 1. Buscar cartas de Charizard
+curl "http://localhost:3000/api/cards/search?q=charizard"
+
+# 2. Ver detalles completos (con historial)
+curl "http://localhost:3000/api/cards/base1-4"
+
+# 3. Actualizar precio actual
+curl -X POST "http://localhost:3000/api/prices/update-aggregated/base1-4"
+```
+
+### Explorar Sets de Cartas
+
+```bash
+# Listar todas las series
+curl "http://localhost:3000/api/sets/series"
+
+# Ver sets de una serie específica
+curl "http://localhost:3000/api/sets/series/Base"
+
+# Detalles de un set con estadísticas
+curl "http://localhost:3000/api/sets/base1/stats"
+```
+
+### Filtrar Cartas
+
+```bash
+# Cartas raras entre 10€ y 100€
+curl "http://localhost:3000/api/cards/filter?rarity=Rare&minPrice=10&maxPrice=100&currency=eur"
+
+# Top 20 cartas más caras en USD
+curl "http://localhost:3000/api/cards/expensive?limit=20&currency=usd"
+
+# Cartas con tendencia al alza (últimas 24h)
+curl "http://localhost:3000/api/cards/trending/price-increase?period=24h"
+```
+
+### Comparar Precios
+
+```bash
+# Comparar 3 cartas diferentes
+curl "http://localhost:3000/api/cards/compare?ids=base1-4,base1-2,base1-15"
+```
 
 ---
 
@@ -226,7 +397,7 @@ El sistema ejecuta automáticamente las siguientes tareas mediante `node-cron`:
 | **Cartas Populares**         | Cada hora            | Actualiza precios de cartas frecuentemente consultadas |
 | **Cartas Normales**          | Cada 6 horas         | Actualiza precios de cartas menos populares            |
 
-Configuración en: `backend/src/jobs/scheduler.cron.js`
+Configuración en: [backend/src/jobs/scheduler.js](backend/src/jobs/scheduler.js)
 
 ---
 
@@ -242,12 +413,59 @@ El proyecto utiliza un flujo de trabajo basado en ramas:
 
 - **`feature/backend`**: Desarrollo del API REST y servicios backend
   - Incluye: Express API, servicios, controladores, cron jobs
+  - Para trabajar en backend: `git checkout feature/backend`
 - **`feature/frontend-base`**: Desarrollo de la interfaz de usuario
   - Incluye: Next.js app, componentes React, estilos
+  - Para trabajar en frontend: `git checkout feature/frontend-base`
 
 ---
 
-## 📝 Licencia
+## � Solución de Problemas
+
+### Error: "Cannot connect to database"
+
+**Solución:**
+
+- Verifica que las credenciales en `.env` sean correctas
+- Asegúrate de que Supabase esté configurado correctamente
+- Comprueba la conexión: `psql -h DB_HOST -U DB_USER -d DB_NAME`
+
+### Error: "POKEMON_TCG_API_KEY is required"
+
+**Solución:**
+
+1. Regístrate en [https://dev.pokemontcg.io/](https://dev.pokemontcg.io/)
+2. Copia tu API key
+3. Añádela al archivo `.env`
+
+### El servidor no inicia en el puerto 3000
+
+**Solución:**
+
+- El puerto puede estar ocupado. Cambia el `PORT` en `.env`
+- O cierra el proceso que está usando el puerto: `lsof -ti:3000 | xargs kill -9`
+
+### No hay datos después de la sincronización
+
+**Solución:**
+
+```bash
+# Ejecuta manualmente la sincronización en orden:
+curl http://localhost:3000/api/sync/sets
+curl http://localhost:3000/api/sync/cards/base1
+curl http://localhost:3000/api/sync/all-cards
+```
+
+### Error: "Schema not found"
+
+**Solución:**
+
+- Ejecuta el archivo `backend/src/config/schema.sql` en Supabase SQL Editor
+- Verifica que todas las tablas se hayan creado correctamente
+
+---
+
+## �📝 Licencia
 
 Este proyecto está bajo la Licencia MIT. Ver el archivo [LICENSE](LICENSE) para más detalles.
 
