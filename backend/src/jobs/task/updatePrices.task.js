@@ -18,13 +18,13 @@ export async function updateHotPricesTask(batchSize = 50) {
     // Buscar cartas con mas de 10 actualizaciones en los ultimos 7 dias
     const { rows: hotCards } = await query(
       `
-      SELECT DISTINCT c.id, c.name
+      SELECT c.id, c.name, COUNT(*) as update_count
       FROM cards c
       JOIN price_history ph ON c.id = ph.card_id
       WHERE ph.created_at > NOW() - INTERVAL '7 days'
       GROUP BY c.id, c.name
       HAVING COUNT(*) > 10
-      ORDER BY COUNT(*) DESC
+      ORDER BY update_count DESC
       LIMIT $1
       `,
       [batchSize],
@@ -35,7 +35,7 @@ export async function updateHotPricesTask(batchSize = 50) {
 
     for (const card of hotCards) {
       try {
-        await syncAggregatedPrice(card.id);
+        await syncAggregatedPrice(card.id); // Actualizar precio
         logger.success(`${card.name}`);
       } catch (error) {
         logger.error(`Error en ${card.name}`, error);
@@ -52,6 +52,7 @@ export async function updateHotPricesTask(batchSize = 50) {
 /**
  * Actualiza precios de cartas normales (sin actualizacion recinte)
  */
+
 export async function updateNormalPricesTask(batchSize = 100) {
   const logger = new TaskLogger("UPDATE_NORMAL_PRICES");
   logger.start();
@@ -99,6 +100,7 @@ export async function updateNormalPricesTask(batchSize = 100) {
 /**
  * Actualiza TODAS las cartas en lotes (para 19,000+ cartas)
  */
+// backend/src/jobs/task/updatePrices.task.js
 export async function updateAllPricesTask(batchSize = 100, delayMs = 2000) {
   const logger = new TaskLogger("UPDATE_ALL_PRICES");
   logger.start();

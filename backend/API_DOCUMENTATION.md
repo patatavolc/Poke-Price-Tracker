@@ -319,16 +319,34 @@ Información completa de una carta incluyendo historial de precios.
     "series": "Base",
     "release_date": "1999-01-09"
   },
-  "priceHistory": [
+  "priceAverage": {
+    "avg_price_eur": "435.50",
+    "avg_price_usd": "479.25",
+    "total_entries": 15
+  },
+  "history": [
     {
       "price_eur": 420.0,
       "price_usd": 462.0,
-      "source": "aggregated",
       "created_at": "2026-01-14T10:00:00Z"
+    },
+    {
+      "price_eur": 445.0,
+      "price_usd": 489.5,
+      "created_at": "2026-01-15T10:00:00Z"
     }
   ]
 }
 ```
+
+**Campos Adicionales:**
+
+- `priceAverage`: Media calculada del historial completo de precios
+  - `avg_price_eur`: Precio promedio en euros
+  - `avg_price_usd`: Precio promedio en dólares
+  - `total_entries`: Número total de registros en el historial
+
+````
 
 **Errores:**
 
@@ -343,7 +361,7 @@ Información completa de una carta incluyendo historial de precios.
 {
   "error": "Carta no encontrada"
 }
-```
+````
 
 ---
 

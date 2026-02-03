@@ -13,9 +13,34 @@ export const getCardByIdWithHistory = async (id) => {
 
   const historyRes = await query(historyQuery, [id]);
 
+  // Calcular la media del historial de precios
+  const priceAverage =
+    historyRes.rows.length > 0
+      ? {
+          avg_price_eur: (
+            historyRes.rows.reduce(
+              (sum, entry) => sum + (parseFloat(entry.price_eur) || 0),
+              0,
+            ) / historyRes.rows.length
+          ).toFixed(2),
+          avg_price_usd: (
+            historyRes.rows.reduce(
+              (sum, entry) => sum + (parseFloat(entry.price_usd) || 0),
+              0,
+            ) / historyRes.rows.length
+          ).toFixed(2),
+          total_entries: historyRes.rows.length,
+        }
+      : {
+          avg_price_eur: null,
+          avg_price_usd: null,
+          total_entries: 0,
+        };
+
   return {
     ...cardRes.rows[0],
     history: historyRes.rows,
+    priceAverage: priceAverage,
   };
 };
 
