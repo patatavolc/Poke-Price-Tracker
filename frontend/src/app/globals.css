@@ -1,0 +1,35 @@
+@import "tailwindcss";
+
+@theme {
+  --color-app-bg: #000814;
+  --color-card-bg: #001d3d;
+  --color-ui-border: #003566;
+
+  --color-brand-primary: #ffc300;
+  --color-brand-highlight: #ffd60a;
+  --color-brand-action: #ef4444;
+
+  --font-main: var(--font-inter);
+  --font-display: var(--font-exo-2);
+}
+
+@variant light (&:where(.light, .light *)) {
+  --color-app-bg: #f8fafc;
+  --color-card-bg: #ffffff;
+  --color-ui-border: #e2e8f0;
+  --color-brand-primary: #d97706;
+}
+
+@layer base {
+  body {
+    @apply bg-app-bg text-white font-main antialiased transition-colors duration-300;
+  }
+
+  .light body {
+    @apply text-slate-900;
+  }
+
+  h1, h2, h3, .text-display {
+    @apply font-display font-bold tracking-tight;
+  }
+}
