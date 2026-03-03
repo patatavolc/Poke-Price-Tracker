@@ -108,24 +108,33 @@ export default function InicioPage() {
       </section>
 
       {/* Sección del carrusel de cartas en tendencia */}
-      <section className="container mx-auto px-4 py-12 bg-card-bg">
-        <div className="mb-8">
-          <h2 className="text-3xl font-semibold text-white mb-2 px-4">
-            Cartas en Tendencia
-          </h2>
-          <p className="text-gray-300 px-4 mb-6">
-            Las cartas más populares del momento
-          </p>
-          <LogoLoop
-            cards={cardsData}
-            speed={50}
-            direction="left"
-            pauseOnHover={true}
-            fadeOut={true}
-            gap={16}
-            className="py-6"
-          />
-        </div>
+      <section className="w-full py-4 bg-ui-border">
+        <LogoLoop
+          cards={cardsData}
+          speed={50}
+          direction="left"
+          pauseOnHover={true}
+          fadeOut={true}
+          fadeOutColor="#003566"
+          gap={32}
+          renderItem={(card) => (
+            <div className="flex items-center gap-3 text-white">
+              <span className="text-lg font-semibold">{card.name}</span>
+              <span className="text-sm">•</span>
+              <span className="text-2xl font-bold">
+                ${card.price.toFixed(2)}
+              </span>
+              <span
+                className={`text-base font-medium ${
+                  card.priceChange >= 0 ? "text-green-400" : "text-red-400"
+                }`}
+              >
+                {card.priceChange >= 0 ? "↑" : "↓"}{" "}
+                {Math.abs(card.priceChange).toFixed(2)}%
+              </span>
+            </div>
+          )}
+        />
       </section>
     </div>
   );
