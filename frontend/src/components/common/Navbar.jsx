@@ -2,6 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import React from "react";
 import Input from "../ui/Input";
+import Button from "../../../components/Button";
 
 export default function Navbar() {
   return (
@@ -45,8 +46,9 @@ export default function Navbar() {
         </nav>
       </div>
 
-      <div>
+      <div className="flex items-center space-x-2">
         <Input placeholder="Buscar..." />
+        <Button className="primary ml-2">Buscar</Button>
         {/* Boton de Iniciar Sesion o Registrarse, si ya lo estan, que salga un icono o algo */}
       </div>
     </div>

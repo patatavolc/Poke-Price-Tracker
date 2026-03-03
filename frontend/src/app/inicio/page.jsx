@@ -1,12 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import Navbar from "@/components/common/Navbar";
 import Button from "@/components/ui/Button";
-import LogoLoop from "../inicio/_components/LogoLoop";
-import FlipCard from "../inicio/_components/FlipCard";
+import LogoLoop from "./_components/LogoLoop";
+import FlipCard from "@/app/inicio/_components/FlipCard";
 
-export default function TestPage() {
+export default function InicioPage() {
   // Cartas destacadas para la animación de flip
   const featuredCards = [
     "https://images.pokemontcg.io/xy7/54_hires.png", // Charizard EX
@@ -62,8 +61,6 @@ export default function TestPage() {
 
   return (
     <div className="min-h-screen bg-card-bg">
-      <Navbar />
-
       {/* Hero Section */}
       <section className="relative py-16 lg:py-24 overflow-hidden">
         {/* Gradiente radial con brillo detrás de la carta */}
