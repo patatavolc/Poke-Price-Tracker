@@ -8,20 +8,21 @@ export default function Navbar() {
   return (
     <div className="flex items-center justify-between p-4 bg-app shadow-md">
       <div className="flex items-center space-x-8">
-        <Link href="/inicio">
+        <Link href="/inicio" className="flex items-center gap-0">
           <Image
             src="/brand/navbar-logo.png"
             alt="Logo de NOIDEX"
             width={150}
             height={50}
           />
+          <span className="text-4xl font-bold text-brand-primary">Noidex</span>
         </Link>
         <nav>
           <ul className="flex space-x-4">
             <li>
               <Link
                 href="/market"
-                className="text-white hover:text-brand-highlight"
+                className="text-lg text-white hover:text-brand-highlight transition-colors"
               >
                 Mercado
               </Link>
@@ -29,7 +30,7 @@ export default function Navbar() {
             <li>
               <Link
                 href="/pack-opener"
-                className="text-white hover:text-brand-highlight"
+                className="text-lg text-white hover:text-brand-highlight transition-colors"
               >
                 Packs
               </Link>
@@ -37,7 +38,7 @@ export default function Navbar() {
             <li>
               <Link
                 href="/profile"
-                className="text-white hover:text-brand-highlight"
+                className="text-lg text-white hover:text-brand-highlight transition-colors"
               >
                 Colleccion
               </Link>

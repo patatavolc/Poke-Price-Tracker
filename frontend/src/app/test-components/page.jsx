@@ -4,6 +4,7 @@ import Link from "next/link";
 import Button from "@/components/ui/Button";
 import LogoLoop from "../inicio/_components/LogoLoop";
 import FlipCard from "../inicio/_components/FlipCard";
+import GradientText from "../inicio/_components/GradientText";
 
 export default function TestPage() {
   // Cartas destacadas para la animación de flip
@@ -78,9 +79,15 @@ export default function TestPage() {
           {/* Contenido del Hero */}
           <div className="text-center lg:text-left space-y-8 lg:pr-8">
             <div className="space-y-4">
-              <h1 className="text-6xl lg:text-7xl font-bold text-white leading-tight">
+              <GradientText
+                colors={["#ffb600", "#ffd60a", "#ffed4e", "#ffd60a"]}
+                animationSpeed={6}
+                direction="horizontal"
+                yoyo={false}
+                className="text-6xl lg:text-7xl font-bold leading-tight"
+              >
                 Descubre el Valor de tus Cartas Pokémon
-              </h1>
+              </GradientText>
               <p className="text-xl lg:text-2xl text-gray-200 max-w-3xl mx-auto lg:mx-0">
                 Rastrea precios en tiempo real, analiza tendencias y toma las
                 mejores decisiones para tu colección
@@ -116,9 +123,10 @@ export default function TestPage() {
           pauseOnHover={true}
           fadeOut={true}
           fadeOutColor="#003566"
+          scaleOnHover={true}
           gap={32}
           renderItem={(card) => (
-            <div className="flex items-center gap-3 text-white">
+            <div className="flex items-center gap-3 text-white transition-transform duration-300 ease-out group-hover/item:scale-110">
               <span className="text-lg font-semibold">{card.name}</span>
               <span className="text-sm">•</span>
               <span className="text-2xl font-bold">
