@@ -3,8 +3,8 @@
 import { useEffect, useRef, useState } from "react";
 
 const TextReveal = () => {
-  const [visibleSections, setVisibleSections] = useState([]);
-  const sectionRefs = useRef([]);
+    const [visibleSections, setVisibleSections] = useState([]);
+    const sectionRefs = useRef([]);
 
   useEffect(() => {
     const observers = [];
