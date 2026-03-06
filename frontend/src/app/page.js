@@ -135,7 +135,7 @@ export default function Home() {
             <section className="py-16 lg:py-24">
                 <div className="container mx-auto px-4 mb-12">
                     <GradientText
-                        colors={["#ffd60a", "#ffffff", "#003566", "#ffd60a"]}
+                        colors={["#ffd60a", "#ffc300", "#ffba08", "#ffd60a"]}
                         animationSpeed={4}
                         direction="horizontal"
                         className="text-4xl lg:text-5xl font-bold text-center"
