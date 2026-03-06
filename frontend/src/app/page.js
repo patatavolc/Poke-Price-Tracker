@@ -25,41 +25,49 @@ export default function Home() {
             name: "Charizard VMAX",
             price: 245.5,
             priceChange: 12.5,
+            image: "https://images.pokemontcg.io/swsh4/20_hires.png",
         },
         {
             name: "Pikachu VMAX",
             price: 89.99,
             priceChange: -5.3,
+            image: "https://images.pokemontcg.io/swsh4/188_hires.png",
         },
         {
             name: "Mewtwo EX",
             price: 156.75,
             priceChange: 8.2,
+            image: "https://images.pokemontcg.io/xy1/23_hires.png",
         },
         {
             name: "Lugia V",
             price: 72.3,
             priceChange: 3.7,
+            image: "https://images.pokemontcg.io/swsh9/138_hires.png",
         },
         {
             name: "Rayquaza VMAX",
             price: 198.4,
             priceChange: -2.1,
+            image: "https://images.pokemontcg.io/swsh7/111_hires.png",
         },
         {
             name: "Umbreon VMAX",
             price: 312.0,
             priceChange: 15.8,
+            image: "https://images.pokemontcg.io/swsh45/215_hires.png",
         },
         {
             name: "Gengar VMAX",
             price: 134.5,
             priceChange: -7.4,
+            image: "https://images.pokemontcg.io/swsh6/157_hires.png",
         },
         {
             name: "Gyarados V",
             price: 67.2,
             priceChange: 4.5,
+            image: "https://images.pokemontcg.io/swsh7/98_hires.png",
         },
     ];
 
@@ -126,9 +134,14 @@ export default function Home() {
             {/* Sección de scroll infinito de cartas */}
             <section className="py-16 lg:py-24">
                 <div className="container mx-auto px-4 mb-12">
-                    <h2 className="text-4xl lg:text-5xl font-bold text-center text-brand-highlight">
+                    <GradientText
+                        colors={["#ffd60a", "#ffffff", "#003566", "#ffd60a"]}
+                        animationSpeed={4}
+                        direction="horizontal"
+                        className="text-4xl lg:text-5xl font-bold text-center"
+                    >
                         Cartas en Tendencia
-                    </h2>
+                    </GradientText>
                 </div>
                 <LogoLoop
                     cards={cardsData}
@@ -164,14 +177,28 @@ export default function Home() {
             <TextReveal />
 
             {/* Seccion de cartas destacadas */}
-            <section>
-                <h2 className="text-3xl lg:text-4xl font-bold text-center mb-12">
-                    Cartas Destacadas
-                </h2>
-                <div className="container mx-auto px-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
-                    {cardsData.map((card, index) => (
-                        <FeaturedCard key={index} cardData={card} />
-                    ))}
+            <section className="relative py-32 px-4 overflow-hidden bg-gradient-to-b from-app to-card-bg">
+                <div className="container mx-auto max-w-7xl">
+                    <div className="mb-16">
+                        <GradientText
+                            colors={[
+                                "#ffd60a",
+                                "#ffffff",
+                                "#003566",
+                                "#ffd60a",
+                            ]}
+                            animationSpeed={4}
+                            direction="horizontal"
+                            className="text-4xl lg:text-5xl font-bold text-center"
+                        >
+                            Cartas Destacadas
+                        </GradientText>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 grid-rows-2 gap-6">
+                        {cardsData.map((card, index) => (
+                            <FeaturedCard key={index} cardData={card} />
+                        ))}
+                    </div>
                 </div>
             </section>
         </div>
