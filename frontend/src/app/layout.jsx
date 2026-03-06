@@ -19,6 +19,9 @@ export const metadata = {
     title: "NOIDEX | Market & Packs",
     description:
         "Plataforma de analisis de precios TCG y simulador de apertura de sobres",
+    icons: {
+        icon: "/favicon.png",
+    },
 };
 
 export default function RootLayout({ children }) {
@@ -29,7 +32,7 @@ export default function RootLayout({ children }) {
         >
             <body className="min-h-screen flex flex-col">
                 <Navbar />
-                <main className="flex-grow">{children}</main>
+                <main className="grow">{children}</main>
                 <Footer />
             </body>
         </html>
