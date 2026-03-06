@@ -6,6 +6,8 @@ import LogoLoop from "./inicio/_components/LogoLoop";
 import FlipCard from "./inicio/_components/FlipCard";
 import GradientText from "./inicio/_components/GradientText";
 import TextReveal from "./inicio/_components/TextReveal";
+import { useEffect, useState } from "react";
+import FeaturedCard from "./inicio/_components/FeaturedCard";
 
 export default function Home() {
     // Cartas destacadas para la animación de flip
@@ -121,43 +123,57 @@ export default function Home() {
                 </div>
             </section>
 
-            {/* Sección del carrusel de cartas en tendencia */}
-            <section className="w-full py-4 bg-ui-border">
+            {/* Sección de scroll infinito de cartas */}
+            <section className="py-16 lg:py-24">
+                <div className="container mx-auto px-4 mb-12">
+                    <h2 className="text-4xl lg:text-5xl font-bold text-center text-brand-highlight">
+                        Cartas en Tendencia
+                    </h2>
+                </div>
                 <LogoLoop
                     cards={cardsData}
-                    speed={50}
+                    speed={60}
                     direction="left"
-                    pauseOnHover={true}
+                    gap={64}
                     fadeOut={true}
-                    fadeOutColor="#003566"
-                    scaleOnHover={true}
-                    gap={32}
-                    renderItem={(card) => (
-                        <div className="flex items-center gap-3 text-white transition-transform duration-300 ease-out group-hover/item:scale-110">
-                            <span className="text-lg font-semibold">
-                                {card.name}
-                            </span>
-                            <span className="text-sm">•</span>
-                            <span className="text-2xl font-bold">
-                                ${card.price.toFixed(2)}
-                            </span>
-                            <span
-                                className={`text-base font-medium ${
-                                    card.priceChange >= 0
-                                        ? "text-green-400"
-                                        : "text-red-400"
-                                }`}
-                            >
-                                {card.priceChange >= 0 ? "↑" : "↓"}{" "}
-                                {Math.abs(card.priceChange).toFixed(2)}%
-                            </span>
-                        </div>
-                    )}
+                    fadeOutColor="#001d3d"
+                    pauseOnHover={true}
+                    ariaLabel="Cartas Pokémon en tendencia"
+                    renderItem={(card) => {
+                        const isPositive = card.priceChange >= 0;
+                        return (
+                            <div className="flex items-center gap-6 transition-all duration-300 hover:scale-110 cursor-pointer">
+                                <span className="text-3xl font-bold text-white">
+                                    {card.name}
+                                </span>
+                                <span className="text-2xl font-semibold text-brand-highlight">
+                                    ${card.price.toFixed(2)}
+                                </span>
+                                <span
+                                    className={`text-2xl font-bold ${isPositive ? "text-green-400" : "text-red-400"}`}
+                                >
+                                    {isPositive ? "↑" : "↓"}{" "}
+                                    {Math.abs(card.priceChange).toFixed(2)}%
+                                </span>
+                            </div>
+                        );
+                    }}
                 />
             </section>
-
             {/* Sección de explicación con animaciones */}
             <TextReveal />
+
+            {/* Seccion de cartas destacadas */}
+            <section>
+                <h2 className="text-3xl lg:text-4xl font-bold text-center mb-12">
+                    Cartas Destacadas
+                </h2>
+                <div className="container mx-auto px-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+                    {cardsData.map((card, index) => (
+                        <FeaturedCard key={index} cardData={card} />
+                    ))}
+                </div>
+            </section>
         </div>
     );
 }
