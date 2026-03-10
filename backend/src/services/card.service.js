@@ -50,7 +50,7 @@ export const getCardPriceService = async (id) => {
 
   const res = await query(queryText, [id]);
 
-  if (res.rows === 0) {
+  if (res.rows.length === 0) {
     return null;
   }
 
