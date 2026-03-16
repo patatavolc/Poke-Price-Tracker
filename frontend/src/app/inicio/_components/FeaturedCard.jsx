@@ -1,3 +1,5 @@
+import Image from "next/image";
+
 export default function FeaturedCard({ cardData }) {
     const isPositive = cardData.priceChange >= 0;
 
@@ -9,11 +11,13 @@ export default function FeaturedCard({ cardData }) {
             <div className="relative p-6 flex flex-col items-center">
                 {/* Imagen de la carta */}
                 {cardData.image && (
-                    <div className="w-full mb-6 flex justify-center">
-                        <img
+                    <div className="w-full mb-6 flex justify-center relative aspect-[3/4]">
+                        <Image
                             src={cardData.image}
                             alt={cardData.name}
-                            className="w-full h-auto rounded-lg shadow-2xl transition-transform duration-300 group-hover:scale-105"
+                            fill
+                            className="object-contain rounded-lg shadow-2xl transition-transform duration-300 group-hover:scale-105"
+                            sizes="(max-width: 768px) 100vw, 30vw"
                         />
                     </div>
                 )}

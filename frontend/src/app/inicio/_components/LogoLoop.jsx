@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState, memo } from "react";
+import Image from "next/image";
 
 const ANIMATION_CONFIG = {
     SMOOTH_TAU: 0.25,
@@ -411,7 +412,7 @@ export const LogoLoop = memo(
                         {item.node}
                     </span>
                 ) : (
-                    <img
+                    <Image
                         className={cx(
                             "h-[var(--logoloop-logoHeight)] w-auto block object-contain",
                             "[-webkit-user-drag:none] pointer-events-none",
@@ -421,10 +422,10 @@ export const LogoLoop = memo(
                                 "transition-transform duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] group-hover/item:scale-120",
                         )}
                         src={item.src}
-                        srcSet={item.srcSet}
-                        sizes={item.sizes}
-                        width={item.width}
-                        height={item.height}
+                        // srcSet: Next.js handles srcSet automatically
+                        // sizes: Next.js handles sizes automatically if width/height provided or fill
+                        width={item.width || 200} // Provide fallback or ensure item.width exists
+                        height={item.height || 100} // Provide fallback or ensure item.height exists
                         alt={item.alt ?? ""}
                         title={item.title}
                         loading="lazy"

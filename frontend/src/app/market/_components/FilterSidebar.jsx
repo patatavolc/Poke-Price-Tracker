@@ -1,5 +1,6 @@
 // frontend/src/app/market/_components/FilterSidebar.jsx
 import { useState } from "react";
+import Image from "next/image";
 
 // Mapa de los tipos en español con el nombre del icono SVG en inglés
 const TYPE_ICONS = {
@@ -125,10 +126,11 @@ export default function FilterSidebar({
                                         }`}
                                         aria-label={`Filtrar por tipo ${type}`}
                                     >
-                                        <img
+                                        <Image
                                             src={`/icons/types/${iconName}.svg`}
                                             alt={type}
-                                            className={`w-full h-full object-contain transition-opacity duration-200 ${
+                                            fill
+                                            className={`object-contain transition-opacity duration-200 p-1 ${
                                                 isSelected
                                                     ? "opacity-100"
                                                     : "opacity-60 group-hover:opacity-100"
