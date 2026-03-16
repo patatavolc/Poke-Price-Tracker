@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { animate, stagger } from "animejs";
 import MarketCard from "./_components/MarketCard";
 import FilterSidebar from "./_components/FilterSidebar";
 import SearchBar from "./_components/SearchBar";
@@ -86,6 +87,17 @@ export default function MarketPage() {
     const [priceRange, setPriceRange] = useState({ min: "", max: "" });
     const [selectedTypes, setSelectedTypes] = useState([]);
 
+    // Animación de aparición de las cartas al cargar la vista
+    useEffect(() => {
+        animate(".animate-card", {
+            translateY: [30, 0], // Sube ligeramente 30px
+            opacity: [0, 1], // De invisible a visible
+            delay: stagger(100, { start: 150 }), // Efecto cascada: 100ms entre cada carta
+            ease: "outCubic",
+            duration: 600,
+        });
+    }, []);
+
     // Constantes para filtros
     const TYPES = [
         "Normal",
@@ -163,7 +175,12 @@ export default function MarketPage() {
                         {/* Grid de Cartas (4 columnas) */}
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                             {MOCK_CARDS.map((card) => (
-                                <MarketCard key={card.id} card={card} />
+                                <div
+                                    key={card.id}
+                                    className="animate-card opacity-0"
+                                >
+                                    <MarketCard card={card} />
+                                </div>
                             ))}
                         </div>
                     </section>
