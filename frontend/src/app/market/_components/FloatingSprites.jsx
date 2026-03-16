@@ -7,15 +7,21 @@ export default function FloatingSprites() {
     const [sprites, setSprites] = useState([]);
 
     useEffect(() => {
-        // Inicializamos 10 sprites para que floten por el fondo
-        const initialSprites = Array.from({ length: 10 }).map((_, i) => ({
-            id: i,
-            pokemonId: Math.floor(Math.random() * 1010) + 1, // IDs de Pokemon funcionales
-            scale: Math.random() * 1 + 1, // Escala aleatoria entre 1x y 2x
-            delay: Math.random() * 3000, // Retraso de inicio aleatorio
-        }));
+        // Para evitar el warning de "cascading renders", movemos la inicialización
+        // fuera del flujo síncrono del efecto usando setTimeout
+        const timer = setTimeout(() => {
+            // Inicializamos 10 sprites para que floten por el fondo
+            const initialSprites = Array.from({ length: 10 }).map((_, i) => ({
+                id: i,
+                pokemonId: Math.floor(Math.random() * 1010) + 1, // IDs de Pokemon funcionales
+                scale: Math.random() * 1 + 1, // Escala aleatoria entre 1x y 2x
+                delay: Math.random() * 3000, // Retraso de inicio aleatorio
+            }));
 
-        setSprites(initialSprites);
+            setSprites(initialSprites);
+        }, 10);
+
+        return () => clearTimeout(timer);
     }, []);
 
     useEffect(() => {
