@@ -1,4 +1,27 @@
 // frontend/src/app/market/_components/FilterSidebar.jsx
+import { useState } from "react";
+
+// Mapa de los tipos en español con el nombre del icono SVG en inglés
+const TYPE_ICONS = {
+    Normal: "normal",
+    Fuego: "fire",
+    Agua: "water",
+    Planta: "grass",
+    Eléctrico: "electric",
+    Hielo: "ice",
+    Lucha: "fighting",
+    Veneno: "poison",
+    Tierra: "ground",
+    Volador: "flying",
+    Psíquico: "psychic",
+    Bicho: "bug",
+    Roca: "rock",
+    Fantasma: "ghost",
+    Dragón: "dragon",
+    Siniestro: "dark",
+    Acero: "steel",
+    Hada: "fairy",
+};
 
 export default function FilterSidebar({
     priceRange,
@@ -9,6 +32,8 @@ export default function FilterSidebar({
     SETS,
     RARITIES,
 }) {
+    const [isTypesExpanded, setIsTypesExpanded] = useState(false);
+
     return (
         <aside className="w-full lg:w-1/4 xl:w-1/5 space-y-6 bg-[#002855] p-6 rounded-xl border border-ui-border h-fit shadow-lg shadow-black/20">
             <h2 className="text-xl font-semibold border-b border-ui-border pb-2 text-white">
@@ -51,22 +76,74 @@ export default function FilterSidebar({
 
             {/* Filtro: Tipo */}
             <div>
-                <h3 className="font-medium text-brand-highlight mb-3">Tipo</h3>
-                <div className="flex flex-col gap-2 max-h-40 overflow-y-auto pr-2 custom-scrollbar">
-                    {TYPES.map((type) => (
-                        <label
-                            key={type}
-                            className="flex items-center gap-2 text-sm cursor-pointer hover:text-white transition-colors"
-                        >
-                            <input
-                                type="checkbox"
-                                className="rounded border-ui-border bg-card-bg text-brand-primary focus:ring-brand-primary focus:ring-opacity-50"
-                                checked={selectedTypes.includes(type)}
-                                onChange={() => handleTypeToggle(type)}
-                            />
-                            {type}
-                        </label>
-                    ))}
+                <button
+                    onClick={() => setIsTypesExpanded(!isTypesExpanded)}
+                    className="flex items-center justify-between w-full mb-3 group"
+                >
+                    <h3 className="font-medium text-brand-highlight group-hover:text-brand-primary transition-colors">
+                        Tipo
+                    </h3>
+                    <svg
+                        className={`w-5 h-5 text-gray-400 group-hover:text-brand-primary transition-transform duration-200 ${
+                            isTypesExpanded ? "rotate-180" : ""
+                        }`}
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                    >
+                        <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M19 9l-7 7-7-7"
+                        />
+                    </svg>
+                </button>
+
+                {/* Contenedor de tipos que se anima al aparecer/desaparecer (usamos grid grid-rows-[1fr|0fr] en CSS o simplemente max-heigth/hide) - en este caso CSS simple */}
+                <div
+                    className={`grid transition-all duration-300 ease-in-out ${
+                        isTypesExpanded
+                            ? "grid-rows-[1fr] opacity-100"
+                            : "grid-rows-[0fr] opacity-0"
+                    }`}
+                >
+                    <div className="overflow-hidden">
+                        <div className="flex flex-wrap gap-3 pb-2 pt-1">
+                            {TYPES.map((type) => {
+                                const iconName = TYPE_ICONS[type] || "normal";
+                                const isSelected = selectedTypes.includes(type);
+
+                                return (
+                                    <button
+                                        key={type}
+                                        onClick={() => handleTypeToggle(type)}
+                                        className={`relative group w-11 h-11 rounded-full flex items-center justify-center border-2 transition-all p-1.5 ${
+                                            isSelected
+                                                ? "border-brand-primary bg-brand-primary/20 shadow-[0_0_12px_rgba(255,195,0,0.4)] scale-110"
+                                                : "border-transparent bg-card-bg hover:bg-ui-border hover:scale-105"
+                                        }`}
+                                        aria-label={`Filtrar por tipo ${type}`}
+                                    >
+                                        <img
+                                            src={`/icons/types/${iconName}.svg`}
+                                            alt={type}
+                                            className={`w-full h-full object-contain transition-opacity duration-200 ${
+                                                isSelected
+                                                    ? "opacity-100"
+                                                    : "opacity-60 group-hover:opacity-100"
+                                            }`}
+                                        />
+
+                                        {/* Tooltip Personalizado */}
+                                        <span className="absolute -top-8 left-1/2 -translate-x-1/2 bg-[#000814] text-gray-200 text-xs py-1 px-2 rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-10 border border-ui-border shadow-lg">
+                                            {type}
+                                        </span>
+                                    </button>
+                                );
+                            })}
+                        </div>
+                    </div>
                 </div>
             </div>
 

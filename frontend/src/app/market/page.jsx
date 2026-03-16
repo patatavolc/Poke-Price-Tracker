@@ -88,17 +88,24 @@ export default function MarketPage() {
 
     // Constantes para filtros
     const TYPES = [
+        "Normal",
         "Fuego",
         "Agua",
         "Planta",
         "Eléctrico",
-        "Psíquico",
+        "Hielo",
         "Lucha",
-        "Oscuro",
-        "Metálico",
-        "Hada",
+        "Veneno",
+        "Tierra",
+        "Volador",
+        "Psíquico",
+        "Bicho",
+        "Roca",
+        "Fantasma",
         "Dragón",
-        "Normal",
+        "Siniestro",
+        "Acero",
+        "Hada",
     ];
     const SETS = [
         "Base Set",
