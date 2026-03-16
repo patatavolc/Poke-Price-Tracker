@@ -5,6 +5,7 @@ import { animate, stagger } from "animejs";
 import MarketCard from "./_components/MarketCard";
 import FilterSidebar from "./_components/FilterSidebar";
 import SearchBar from "./_components/SearchBar";
+import FloatingSprites from "./_components/FloatingSprites";
 
 // Datos de prueba para simular cartas
 const MOCK_CARDS = [
@@ -145,8 +146,11 @@ export default function MarketPage() {
     };
 
     return (
-        <div className="min-h-screen bg-card-bg text-gray-200">
-            <div className="container mx-auto px-4 py-8 max-w-7xl">
+        <div className="min-h-screen bg-card-bg text-gray-200 relative overflow-hidden">
+            {/* Animación de fondo con sprites */}
+            <FloatingSprites />
+
+            <div className="container mx-auto px-4 py-8 max-w-7xl relative z-10">
                 <h1 className="text-3xl font-bold mb-8 text-brand-primary font-display">
                     Mercado de Cartas
                 </h1>
