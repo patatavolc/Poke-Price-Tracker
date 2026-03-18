@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import Image from "next/image";
 
 const TextReveal = () => {
     const [visibleSections, setVisibleSections] = useState([]);
@@ -87,7 +88,7 @@ const TextReveal = () => {
     ];
 
     return (
-        <section className="relative py-32 px-4 overflow-hidden bg-gradient-to-b from-card-bg to-app">
+        <section className="relative py-32 px-4 overflow-hidden bg-linear-to-b from-card-bg to-app">
             <div className="container mx-auto max-w-4xl">
                 <div className="relative space-y-32">
                     {sections.map((section, index) => (
@@ -109,7 +110,7 @@ const TextReveal = () => {
                             {/* Fondo con gradiente */}
                             <div
                                 className={`
-                  absolute inset-0 -z-10 rounded-3xl bg-gradient-to-br ${section.gradient}
+                  absolute inset-0 -z-10 rounded-3xl bg-linear-to-br ${section.gradient}
                   blur-3xl transition-opacity duration-1000
                   ${visibleSections.includes(index) ? "opacity-100" : "opacity-0"}
                 `}
@@ -157,7 +158,7 @@ const TextReveal = () => {
                                 {/* Línea decorativa */}
                                 <div
                                     className={`
-                    mx-auto h-1 bg-gradient-to-r from-transparent via-brand-highlight to-transparent
+                    mx-auto h-1 bg-linear-to-r from-transparent via-brand-highlight to-transparent
                     transition-all duration-1000 ease-out
                     ${
                         visibleSections.includes(index)
@@ -173,7 +174,7 @@ const TextReveal = () => {
 
                             {/* Efecto de superposición con el siguiente */}
                             {index < sections.length - 1 && (
-                                <div className="absolute -bottom-16 inset-x-0 h-32 bg-gradient-to-b from-transparent to-app/50 pointer-events-none" />
+                                <div className="absolute -bottom-16 inset-x-0 h-32 bg-linear-to-b from-transparent to-app/50 pointer-events-none" />
                             )}
 
                             {/* Animaciones de Pokémon laterales y ambientales */}
@@ -183,22 +184,24 @@ const TextReveal = () => {
                                         {/* === POKÉMON AMBIENTALES/FLOTANTES DE FONDO === */}
                                         {pokemonEvents[index].ambient?.map(
                                             (ambientSprite, j) => (
-                                                <img
+                                                <div
                                                     key={`ambient-${index}-${j}`}
-                                                    src={`https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${ambientSprite.id}.png`}
-                                                    alt="Ambient Pokemon"
                                                     className={`
-                        absolute pointer-events-none z-0
-                        transition-all duration-[3s] ease-in-out
-                        ${
-                            visibleSections.includes(index)
-                                ? `opacity-30 translate-y-0`
-                                : "opacity-0 translate-y-12"
-                        }
-                      `}
+                                                      absolute pointer-events-none z-0
+                                                      transition-all duration-[3s] ease-in-out
+                                                      ${
+                                                          visibleSections.includes(
+                                                              index,
+                                                          )
+                                                              ? `opacity-30 translate-y-0`
+                                                              : "opacity-0 translate-y-12"
+                                                      }
+                                                    `}
                                                     style={{
                                                         top: `${ambientSprite.top}%`,
                                                         left: `${ambientSprite.left}%`,
+                                                        width: "96px",
+                                                        height: "96px",
                                                         transform: `scale(${ambientSprite.scale}) translateX(${
                                                             visibleSections.includes(
                                                                 index,
@@ -207,12 +210,22 @@ const TextReveal = () => {
                                                                   20
                                                                 : 0
                                                         }px)`,
-                                                        imageRendering:
-                                                            "pixelated",
-                                                        filter: "blur(2px)",
                                                         transitionDelay: `${ambientSprite.delay}ms`,
                                                     }}
-                                                />
+                                                >
+                                                    <Image
+                                                        src={`https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${ambientSprite.id}.png`}
+                                                        alt="Ambient Pokemon"
+                                                        fill
+                                                        className="object-contain"
+                                                        style={{
+                                                            imageRendering:
+                                                                "pixelated",
+                                                            filter: "blur(2px)",
+                                                        }}
+                                                        unoptimized
+                                                    />
+                                                </div>
                                             ),
                                         )}
 
@@ -250,13 +263,9 @@ const TextReveal = () => {
                                                 >
                                                     !
                                                 </span>
-                                                <img
-                                                    src={`https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${pokemonEvents[index].id1}.png`}
-                                                    alt="Wild Pokemon"
-                                                    className="w-24 h-24 lg:w-36 lg:h-36 drop-shadow-[0_0_15px_rgba(255,214,10,0.6)]"
+                                                <div
+                                                    className="w-24 h-24 lg:w-36 lg:h-36 drop-shadow-[0_0_15px_rgba(255,214,10,0.6)] relative"
                                                     style={{
-                                                        imageRendering:
-                                                            "pixelated",
                                                         transform:
                                                             pokemonEvents[index]
                                                                 .side ===
@@ -264,7 +273,19 @@ const TextReveal = () => {
                                                                 ? "scaleX(-1)"
                                                                 : "none",
                                                     }}
-                                                />
+                                                >
+                                                    <Image
+                                                        src={`https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${pokemonEvents[index].id1}.png`}
+                                                        alt="Wild Pokemon"
+                                                        fill
+                                                        className="object-contain"
+                                                        style={{
+                                                            imageRendering:
+                                                                "pixelated",
+                                                        }}
+                                                        unoptimized
+                                                    />
+                                                </div>
                                             </div>
                                         )}
 
@@ -284,15 +305,19 @@ const TextReveal = () => {
                           }
                         `}
                                                 >
-                                                    <img
-                                                        src={`https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${pokemonEvents[index].id1}.png`}
-                                                        alt="Battle Pokemon 1"
-                                                        className="w-24 h-24 lg:w-36 lg:h-36 drop-shadow-[0_0_15px_rgba(239,68,68,0.6)] animate-pulse"
-                                                        style={{
-                                                            imageRendering:
-                                                                "pixelated",
-                                                        }}
-                                                    />
+                                                    <div className="w-24 h-24 lg:w-36 lg:h-36 drop-shadow-[0_0_15px_rgba(239,68,68,0.6)] animate-pulse relative">
+                                                        <Image
+                                                            src={`https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${pokemonEvents[index].id1}.png`}
+                                                            alt="Battle Pokemon 1"
+                                                            fill
+                                                            className="object-contain"
+                                                            style={{
+                                                                imageRendering:
+                                                                    "pixelated",
+                                                            }}
+                                                            unoptimized
+                                                        />
+                                                    </div>
                                                 </div>
 
                                                 {/* Combatiente Derecho */}
@@ -311,17 +336,25 @@ const TextReveal = () => {
                                                             "200ms",
                                                     }}
                                                 >
-                                                    <img
-                                                        src={`https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${pokemonEvents[index].id2}.png`}
-                                                        alt="Battle Pokemon 2"
-                                                        className="w-24 h-24 lg:w-36 lg:h-36 drop-shadow-[0_0_15px_rgba(59,130,246,0.6)] animate-pulse"
+                                                    <div
+                                                        className="w-24 h-24 lg:w-36 lg:h-36 drop-shadow-[0_0_15px_rgba(59,130,246,0.6)] animate-pulse relative"
                                                         style={{
-                                                            imageRendering:
-                                                                "pixelated",
                                                             transform:
                                                                 "scaleX(-1)",
                                                         }}
-                                                    />
+                                                    >
+                                                        <Image
+                                                            src={`https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${pokemonEvents[index].id2}.png`}
+                                                            alt="Battle Pokemon 2"
+                                                            fill
+                                                            className="object-contain"
+                                                            style={{
+                                                                imageRendering:
+                                                                    "pixelated",
+                                                            }}
+                                                            unoptimized
+                                                        />
+                                                    </div>
                                                 </div>
                                             </>
                                         )}
@@ -343,7 +376,7 @@ const TextReveal = () => {
             }
           `}
                 >
-                    <div className="inline-block px-8 py-4 bg-gradient-to-r from-brand-primary to-brand-highlight rounded-2xl shadow-2xl hover:scale-105 transition-transform duration-300">
+                    <div className="inline-block px-8 py-4 bg-linear-to-r from-brand-primary to-brand-highlight rounded-2xl shadow-2xl hover:scale-105 transition-transform duration-300">
                         <p className="text-2xl md:text-3xl font-bold text-app">
                             Comienza tu aventura ahora
                         </p>

@@ -22,48 +22,56 @@ export default function Home() {
     // Datos de ejemplo - luego los reemplazarás con datos del backend
     const cardsData = [
         {
+            id: 1, // Mock ID
             name: "Charizard VMAX",
             price: 245.5,
             priceChange: 12.5,
             image: "https://images.pokemontcg.io/swsh4/20_hires.png",
         },
         {
+            id: 2, // Mock ID
             name: "Pikachu VMAX",
             price: 89.99,
             priceChange: -5.3,
             image: "https://images.pokemontcg.io/swsh4/188_hires.png",
         },
         {
+            id: 3, // Mock ID
             name: "Mewtwo EX",
             price: 156.75,
             priceChange: 8.2,
             image: "https://images.pokemontcg.io/xy1/23_hires.png",
         },
         {
+            id: 4, // Mock ID
             name: "Lugia V",
             price: 72.3,
             priceChange: 3.7,
             image: "https://images.pokemontcg.io/swsh9/138_hires.png",
         },
         {
+            id: 5, // Mock ID
             name: "Rayquaza VMAX",
             price: 198.4,
             priceChange: -2.1,
             image: "https://images.pokemontcg.io/swsh7/111_hires.png",
         },
         {
+            id: 6, // Mock ID
             name: "Umbreon VMAX",
             price: 312.0,
             priceChange: 15.8,
             image: "https://images.pokemontcg.io/swsh45/215_hires.png",
         },
         {
+            id: 7, // Mock ID
             name: "Gengar VMAX",
             price: 134.5,
             priceChange: -7.4,
             image: "https://images.pokemontcg.io/swsh6/157_hires.png",
         },
         {
+            id: 8, // Mock ID
             name: "Gyarados V",
             price: 67.2,
             priceChange: 4.5,

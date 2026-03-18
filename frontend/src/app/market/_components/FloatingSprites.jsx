@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { animate } from "animejs";
+import Image from "next/image";
 
 export default function FloatingSprites() {
     const [sprites, setSprites] = useState([]);
@@ -68,20 +69,26 @@ export default function FloatingSprites() {
     return (
         <div className="fixed inset-0 pointer-events-none overflow-hidden z-0">
             {sprites.map((sprite) => (
-                <img
+                <div
                     key={sprite.id}
                     id={`floating-sprite-${sprite.id}`}
-                    src={`https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${sprite.pokemonId}.png`}
-                    alt="Floating Pokemon Sprite"
-                    className="absolute opacity-0"
+                    className="absolute opacity-0 w-24 h-24"
                     style={{
                         transform: `scale(${sprite.scale})`,
-                        filter: "blur(1px) drop-shadow(0 0 10px rgba(255, 255, 255, 0.1))", // Difumina un poco para fondo
-                        width: "96px",
-                        height: "96px",
-                        imageRendering: "pixelated", // Para que los sprites no se vean borrosos al escalar
+                        filter: "blur(1px) drop-shadow(0 0 10px rgba(255, 255, 255, 0.1))",
                     }}
-                />
+                >
+                    <Image
+                        src={`https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${sprite.pokemonId}.png`}
+                        alt="Floating Pokemon Sprite"
+                        fill
+                        className="object-contain"
+                        style={{
+                            imageRendering: "pixelated",
+                        }}
+                        unoptimized
+                    />
+                </div>
             ))}
         </div>
     );
