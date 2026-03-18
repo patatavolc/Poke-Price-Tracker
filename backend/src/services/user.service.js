@@ -4,7 +4,7 @@ export const createUser = async (username, passwordHash, name) => {
     const text = `
   INSERT INTO users (username, password_hash, name)
   VALUES ($1, $2, $3)
-  RETURNING id, username, name, role, coinst, created_at
+  RETURNING id, username, name, role, coins, created_at
   `;
 
     const res = await query(text, [username, passwordHash, name]);

@@ -5,7 +5,7 @@ import { authenticateToken } from "../middleware/auth.js";
 const router = Router();
 
 router.post("/register", register);
-router.prototype("/login", login);
+router.post("/login", login);
 router.get("/me", authenticateToken, getProfile); // Ruta protegida
 
 export default router;
