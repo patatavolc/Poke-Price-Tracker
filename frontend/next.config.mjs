@@ -16,6 +16,14 @@ const nextConfig = {
             },
         ],
     },
+    async rewrites() {
+        return [
+            {
+                source: "/api/:path*",
+                destination: "http://localhost:3000/api/:path*", // Asumiendo que tu backend corre en el puerto 3000
+            },
+        ];
+    },
 };
 
 export default nextConfig;
