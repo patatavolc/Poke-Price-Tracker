@@ -58,3 +58,16 @@ export const login = async (req, res) => {
         res.status(500).json({ error: "Error al iniciar sesion" });
     }
 };
+
+export const getProfile = async (req, res) => {
+    try {
+        // req.user viene del middleware authenticateToken
+        const user = await userService.findUserById(req.user.id);
+        if (!user) {
+            return res.status(404).json({ error: "Usuario no encontrado" });
+        }
+        res.json(user);
+    } catch (error) {
+        res.status(500).json({ error: "Error al obtener perfil" });
+    }
+};
