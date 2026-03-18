@@ -88,7 +88,7 @@ const TextReveal = () => {
     ];
 
     return (
-        <section className="relative py-32 px-4 overflow-hidden bg-gradient-to-b from-card-bg to-app">
+        <section className="relative py-32 px-4 overflow-hidden bg-linear-to-b from-card-bg to-app">
             <div className="container mx-auto max-w-4xl">
                 <div className="relative space-y-32">
                     {sections.map((section, index) => (
@@ -110,7 +110,7 @@ const TextReveal = () => {
                             {/* Fondo con gradiente */}
                             <div
                                 className={`
-                  absolute inset-0 -z-10 rounded-3xl bg-gradient-to-br ${section.gradient}
+                  absolute inset-0 -z-10 rounded-3xl bg-linear-to-br ${section.gradient}
                   blur-3xl transition-opacity duration-1000
                   ${visibleSections.includes(index) ? "opacity-100" : "opacity-0"}
                 `}
@@ -158,7 +158,7 @@ const TextReveal = () => {
                                 {/* Línea decorativa */}
                                 <div
                                     className={`
-                    mx-auto h-1 bg-gradient-to-r from-transparent via-brand-highlight to-transparent
+                    mx-auto h-1 bg-linear-to-r from-transparent via-brand-highlight to-transparent
                     transition-all duration-1000 ease-out
                     ${
                         visibleSections.includes(index)
@@ -174,7 +174,7 @@ const TextReveal = () => {
 
                             {/* Efecto de superposición con el siguiente */}
                             {index < sections.length - 1 && (
-                                <div className="absolute -bottom-16 inset-x-0 h-32 bg-gradient-to-b from-transparent to-app/50 pointer-events-none" />
+                                <div className="absolute -bottom-16 inset-x-0 h-32 bg-linear-to-b from-transparent to-app/50 pointer-events-none" />
                             )}
 
                             {/* Animaciones de Pokémon laterales y ambientales */}
@@ -376,7 +376,7 @@ const TextReveal = () => {
             }
           `}
                 >
-                    <div className="inline-block px-8 py-4 bg-gradient-to-r from-brand-primary to-brand-highlight rounded-2xl shadow-2xl hover:scale-105 transition-transform duration-300">
+                    <div className="inline-block px-8 py-4 bg-linear-to-r from-brand-primary to-brand-highlight rounded-2xl shadow-2xl hover:scale-105 transition-transform duration-300">
                         <p className="text-2xl md:text-3xl font-bold text-app">
                             Comienza tu aventura ahora
                         </p>
