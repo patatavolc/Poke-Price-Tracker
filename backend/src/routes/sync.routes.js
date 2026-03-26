@@ -12,13 +12,13 @@ import {
 
 const router = express.Router();
 
-router.get("/sets", syncSets);
-router.get("/cards/:setId", syncCards);
-router.get("/all-cards", syncAll);
-router.get("/missing-cards", syncMissing);
-router.get("/prices", syncPrices);
+router.post("/sets", syncSets);
+router.post("/cards/:setId", syncCards);
+router.post("/all-cards", syncAll);
+router.post("/missing-cards", syncMissing);
+router.post("/prices", syncPrices);
+router.post("/missing-prices", syncMissingPricesCtrl);
 router.get("/queue-status", getQueueStatus);
-router.get("/missing-prices", syncMissingPricesCtrl);
 router.post("/update-all-prices", updateAllPrices);
 
 export default router;
