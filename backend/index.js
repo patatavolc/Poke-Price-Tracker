@@ -11,6 +11,7 @@ import {
     globalErrorHandler,
     notFoundHandler,
 } from "./src/middleware/errorHandler.js";
+import { startPriceWorker } from "./src/jobs/workers/priceWorker.js";
 
 dotenv.config();
 
@@ -66,6 +67,7 @@ testDbConnection();
 
 // Iniciar schedulers (false = no llenar precios al iniciar)
 startAllSchedulers(false);
+startPriceWorker();
 
 app.listen(PORT, () => {
     console.log(`🚀 Servidor corriendo en el puerto ${PORT}`);
