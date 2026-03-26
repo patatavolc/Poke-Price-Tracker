@@ -6,6 +6,8 @@ import {
 } from "../services/pokemon.service.js";
 import { updateAllPricesTask } from "../jobs/task/updatePrices.task.js";
 import { syncMissingPrices, syncAllPrices } from "../services/price/sync.js";
+import { priceQueue } from "../jobs/queues/priceQueue.js";
+import { tryCatch } from "bullmq";
 
 export const syncSets = async (req, res) => {
     try {
@@ -111,5 +113,39 @@ export const updateAllPrices = async (req, res) => {
         });
     } catch (error) {
         res.status(500).json({ error: error.message });
+    }
+};
+
+export const getQueueStatus = async (req, res) => {
+    try {
+        const [waiting, active, completed, failed, delayed] = await Promise.all(
+            [
+                priceQueue.getWaitingCount(),
+                priceQueue.getActiveCount(),
+                priceQueue.getCompletedCount(),
+                priceQueue.getFailedCount(),
+                priceQueue.getDelayedCount(),
+            ],
+        );
+
+        const total = waiting + active + completed + failed + delayed;
+        const processed = completed + failed;
+        const progress =
+            total > 0 ? ((processed / total) * 100).toFixed(1) : "0.0";
+
+        res.status(200).json({
+            status: active > 0 ? "running" : waiting > 0 ? "pending" : "idle",
+            progress: `${progress}%`,
+            jobs: {
+                waiting,
+                active,
+                completed,
+                failed,
+                delayed,
+                total,
+            },
+        });
+    } catch (error) {
+        res.status(500).json({ error: "Error obteniendo estado de la cola" });
     }
 };
