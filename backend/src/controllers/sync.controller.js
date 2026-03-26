@@ -108,8 +108,7 @@ export const updateAllPrices = async (req, res) => {
 
         res.status(202).json({
             message: "Actualización masiva iniciada en segundo plano",
-            estimatedTime: "~10-12 horas para 19,000 cartas",
-            note: "Revisa los logs del servidor para ver el progreso",
+            note: "Consulta GET /api/sync/queue-status para ver el progreso en tiempo real",
         });
     } catch (error) {
         res.status(500).json({ error: error.message });
