@@ -10,74 +10,45 @@ import { useEffect, useState } from "react";
 import FeaturedCard from "./inicio/_components/FeaturedCard";
 
 export default function Home() {
-    // Cartas destacadas para la animación de flip
-    const featuredCards = [
-        "https://images.pokemontcg.io/xy7/54_hires.png", // Charizard EX
-        "https://images.pokemontcg.io/swsh4/25_hires.png", // Pikachu VMAX
-        "https://images.pokemontcg.io/base1/4_hires.png", // Charizard Base
-        "https://images.pokemontcg.io/swsh45/72_hires.png", // Umbreon VMAX
-        "https://images.pokemontcg.io/xy1/23_hires.png", // Mewtwo EX
-    ];
+    const [flipCards, setFlipCards] = useState([]); // Para FlipCard
+    const [trendingCards, setTrendingCards] = useState([]); // Para carrusel
+    const [featuredCards, setFeaturedCards] = useState([]); // Para destacadas
+    const currency = "eur";
 
-    // Datos de ejemplo - luego los reemplazarás con datos del backend
-    const cardsData = [
-        {
-            id: 1, // Mock ID
-            name: "Charizard VMAX",
-            price: 245.5,
-            priceChange: 12.5,
-            image: "https://images.pokemontcg.io/swsh4/20_hires.png",
-        },
-        {
-            id: 2, // Mock ID
-            name: "Pikachu VMAX",
-            price: 89.99,
-            priceChange: -5.3,
-            image: "https://images.pokemontcg.io/swsh4/188_hires.png",
-        },
-        {
-            id: 3, // Mock ID
-            name: "Mewtwo EX",
-            price: 156.75,
-            priceChange: 8.2,
-            image: "https://images.pokemontcg.io/xy1/23_hires.png",
-        },
-        {
-            id: 4, // Mock ID
-            name: "Lugia V",
-            price: 72.3,
-            priceChange: 3.7,
-            image: "https://images.pokemontcg.io/swsh9/138_hires.png",
-        },
-        {
-            id: 5, // Mock ID
-            name: "Rayquaza VMAX",
-            price: 198.4,
-            priceChange: -2.1,
-            image: "https://images.pokemontcg.io/swsh7/111_hires.png",
-        },
-        {
-            id: 6, // Mock ID
-            name: "Umbreon VMAX",
-            price: 312.0,
-            priceChange: 15.8,
-            image: "https://images.pokemontcg.io/swsh45/215_hires.png",
-        },
-        {
-            id: 7, // Mock ID
-            name: "Gengar VMAX",
-            price: 134.5,
-            priceChange: -7.4,
-            image: "https://images.pokemontcg.io/swsh6/157_hires.png",
-        },
-        {
-            id: 8, // Mock ID
-            name: "Gyarados V",
-            price: 67.2,
-            priceChange: 4.5,
-            image: "https://images.pokemontcg.io/swsh7/98_hires.png",
-        },
-    ];
+    // FlipCard: 5 cartas aleatorias de rareza alta
+    useEffect(() => {
+        fetch(
+            `/api/cards/filter?rarity=Rare Holo&minPrice=50&currency=${currency}&limit=20`,
+        )
+            .then((res) => res.json())
+            .then((data) => {
+                let cards = Array.isArray(data) ? data : data?.data || [];
+                // Seleccionar 5 aleatorias
+                cards = cards.sort(() => 0.5 - Math.random()).slice(0, 5);
+                setFlipCards(cards);
+            })
+            .catch(() => setFlipCards([]));
+    }, []);
+
+    // Carrusel: cartas en tendencia de subida
+    useEffect(() => {
+        fetch(`/api/cards/trending/price-increase?period=24h`)
+            .then((res) => res.json())
+            .then((data) => {
+                setTrendingCards(Array.isArray(data) ? data : data?.data || []);
+            })
+            .catch(() => setTrendingCards([]));
+    }, []);
+
+    // Destacadas: cartas más caras
+    useEffect(() => {
+        fetch(`/api/cards/expensive?limit=8&currency=${currency}`)
+            .then((res) => res.json())
+            .then((data) => {
+                setFeaturedCards(Array.isArray(data) ? data : data?.data || []);
+            })
+            .catch(() => setFeaturedCards([]));
+    }, []);
 
     return (
         <div className="min-h-screen bg-card-bg">
@@ -133,7 +104,14 @@ export default function Home() {
                     {/* Carta Animada */}
                     <div className="flex justify-center lg:justify-start">
                         <div className="w-96 h-[530px]">
-                            <FlipCard cards={featuredCards} interval={4000} />
+                            {/* FlipCard: 5 cartas aleatorias de rareza alta */}
+                            <FlipCard
+                                cards={flipCards.map((card) => ({
+                                    image: card.image_small,
+                                    name: card.name,
+                                }))}
+                                interval={4000}
+                            />
                         </div>
                     </div>
                 </div>
@@ -152,7 +130,7 @@ export default function Home() {
                     </GradientText>
                 </div>
                 <LogoLoop
-                    cards={cardsData}
+                    cards={trendingCards}
                     speed={60}
                     direction="left"
                     gap={64}
@@ -160,25 +138,31 @@ export default function Home() {
                     fadeOutColor="#001d3d"
                     pauseOnHover={true}
                     ariaLabel="Cartas Pokémon en tendencia"
-                    renderItem={(card) => {
-                        const isPositive = card.priceChange >= 0;
-                        return (
-                            <div className="flex items-center gap-6 transition-all duration-300 hover:scale-110 cursor-pointer">
-                                <span className="text-3xl font-bold text-white">
-                                    {card.name}
+                    renderItem={(card) => (
+                        <div className="flex items-center gap-6 transition-all duration-300 hover:scale-110 cursor-pointer">
+                            <span className="text-3xl font-bold text-white">
+                                {card.name}
+                            </span>
+                            <span className="text-2xl font-semibold text-brand-highlight">
+                                €
+                                {typeof card.last_price_eur === "number"
+                                    ? card.last_price_eur.toFixed(2)
+                                    : Number(card.last_price_eur).toFixed(2)}
+                            </span>
+                            {card.change_percentage_eur !== undefined && (
+                                <span className="text-2xl font-bold text-green-400">
+                                    +
+                                    {typeof card.change_percentage_eur ===
+                                    "number"
+                                        ? card.change_percentage_eur.toFixed(2)
+                                        : Number(
+                                              card.change_percentage_eur,
+                                          ).toFixed(2)}
+                                    %
                                 </span>
-                                <span className="text-2xl font-semibold text-brand-highlight">
-                                    ${card.price.toFixed(2)}
-                                </span>
-                                <span
-                                    className={`text-2xl font-bold ${isPositive ? "text-green-400" : "text-red-400"}`}
-                                >
-                                    {isPositive ? "↑" : "↓"}{" "}
-                                    {Math.abs(card.priceChange).toFixed(2)}%
-                                </span>
-                            </div>
-                        );
-                    }}
+                            )}
+                        </div>
+                    )}
                 />
             </section>
             {/* Sección de explicación con animaciones */}
@@ -203,8 +187,18 @@ export default function Home() {
                         </GradientText>
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 grid-rows-2 gap-6">
-                        {cardsData.map((card, index) => (
-                            <FeaturedCard key={index} cardData={card} />
+                        {featuredCards.map((card, index) => (
+                            <FeaturedCard
+                                key={index}
+                                cardData={{
+                                    ...card,
+                                    image: card.image_small,
+                                    price:
+                                        typeof card.last_price_eur === "number"
+                                            ? card.last_price_eur
+                                            : Number(card.last_price_eur),
+                                }}
+                            />
                         ))}
                     </div>
                 </div>
