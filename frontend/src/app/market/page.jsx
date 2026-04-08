@@ -9,12 +9,32 @@ import { useMarketCards } from "../../hooks/useMarketCards";
 import { getSets } from "../../lib/api/sets";
 
 const TYPES = [
-    "Normal", "Fuego", "Agua", "Planta", "Eléctrico", "Hielo", "Lucha",
-    "Veneno", "Tierra", "Volador", "Psíquico", "Bicho", "Roca", "Fantasma",
-    "Dragón", "Siniestro", "Acero", "Hada",
+    "Normal",
+    "Fuego",
+    "Agua",
+    "Planta",
+    "Eléctrico",
+    "Hielo",
+    "Lucha",
+    "Veneno",
+    "Tierra",
+    "Volador",
+    "Psíquico",
+    "Bicho",
+    "Roca",
+    "Fantasma",
+    "Dragón",
+    "Siniestro",
+    "Acero",
+    "Hada",
 ];
 const RARITIES = [
-    "Común", "Infrecuente", "Rara", "Rara Holo", "Ultra Rara", "Secreta",
+    "Común",
+    "Infrecuente",
+    "Rara",
+    "Rara Holo",
+    "Ultra Rara",
+    "Secreta",
 ];
 const PAGE_SIZE = 20;
 
@@ -41,14 +61,22 @@ export default function MarketPage() {
     // Poblar selector de sets una sola vez al montar
     useEffect(() => {
         getSets()
-            .then((sets) => setSETS(sets.map((s) => ({ id: s.id, name: s.name }))))
+            .then((sets) =>
+                setSETS(sets.map((s) => ({ id: s.id, name: s.name }))),
+            )
             .catch(() => {});
     }, []);
 
     // Resetear a página 1 cuando cambian los filtros o búsqueda
     useEffect(() => {
         setPage(1);
-    }, [debouncedSearch, selectedTypes, priceRange, selectedSet, selectedRarity]);
+    }, [
+        debouncedSearch,
+        selectedTypes,
+        priceRange,
+        selectedSet,
+        selectedRarity,
+    ]);
 
     const handlePrevPage = () => {
         if (page > 1) setPage(page - 1);
@@ -58,7 +86,9 @@ export default function MarketPage() {
     };
     const handleTypeToggle = (type) => {
         setSelectedTypes((prev) =>
-            prev.includes(type) ? prev.filter((t) => t !== type) : [...prev, type]
+            prev.includes(type)
+                ? prev.filter((t) => t !== type)
+                : [...prev, type],
         );
     };
 
@@ -118,7 +148,9 @@ export default function MarketPage() {
                             <button
                                 className="px-4 py-2 bg-brand-primary text-white rounded shadow disabled:opacity-50"
                                 onClick={handleNextPage}
-                                disabled={page >= Math.ceil(totalCount / PAGE_SIZE)}
+                                disabled={
+                                    page >= Math.ceil(totalCount / PAGE_SIZE)
+                                }
                             >
                                 Siguiente
                             </button>
