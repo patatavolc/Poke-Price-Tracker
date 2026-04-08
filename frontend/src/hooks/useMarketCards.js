@@ -9,6 +9,7 @@ const PAGE_SIZE = 20;
 export function useMarketCards({
     debouncedSearch,
     selectedTypes,
+    typeApiMap,
     priceRange,
     selectedSet,
     selectedRarity,
@@ -46,14 +47,21 @@ export function useMarketCards({
                         return;
                     }
                     // Filtro avanzado (nombre + filtros)
+                    const mappedTypes =
+                        selectedTypes.length > 0
+                            ? selectedTypes.map((t) => typeApiMap[t] || t)
+                            : undefined;
+
+                    const showWithoutPrice = !!(debouncedSearch || selectedSet);
+
                     const { cards: data, count } = await filterCards({
                         name: debouncedSearch || undefined,
-                        types: selectedTypes.length > 0 ? selectedTypes : undefined,
+                        types: mappedTypes,
                         rarity: selectedRarity || undefined,
                         set: selectedSet || undefined,
                         minPrice: priceRange.min || undefined,
                         maxPrice: priceRange.max || undefined,
-                        hasPrice: true,
+                        hasPrice: showWithoutPrice ? false : undefined,
                         limit: PAGE_SIZE,
                         offset,
                     });
@@ -100,7 +108,7 @@ export function useMarketCards({
         return () => {
             cancelled = true;
         };
-    }, [debouncedSearch, selectedTypes, priceRange, selectedSet, selectedRarity, page]);
+    }, [debouncedSearch, selectedTypes, typeApiMap, priceRange, selectedSet, selectedRarity, page]);
 
     return { cards, totalCount, loading, error };
 }
