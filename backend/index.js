@@ -18,8 +18,10 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+
 // Middleware
 app.use(express.json());
+// CORS desactivado: No se permiten peticiones cross-origin.
 
 app.use("/api", mainRouter);
 

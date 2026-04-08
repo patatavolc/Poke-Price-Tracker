@@ -1,7 +1,12 @@
 import { query } from "../config/db.js";
 
 export const getCardByIdWithHistory = async (id) => {
-  const cardQuery = "SELECT * FROM cards WHERE id = $1";
+  const cardQuery = `
+    SELECT c.*, s.name AS set_name
+    FROM cards c
+    LEFT JOIN sets s ON c.set_id = s.id
+    WHERE c.id = $1
+  `;
   const historyQuery =
     "SELECT price_eur, price_usd, created_at FROM price_history WHERE card_id = $1 ORDER BY created_at ASC";
 
@@ -57,11 +62,17 @@ export const getCardPriceService = async (id) => {
   return res.rows[0];
 };
 
-export const getCardsFromSetService = async (set_id) => {
-  const queryText =
-    "SELECT id, name, last_price_eur, last_price_usd FROM cards WHERE set_id = $1";
+export const getCardsFromSetService = async (set_id, limit = 100, offset = 0) => {
+  const queryText = `
+    SELECT c.id, c.name, c.image_small, c.rarity, c.last_price_eur, c.last_price_usd, s.name AS set_name
+    FROM cards c
+    JOIN sets s ON c.set_id = s.id
+    WHERE c.set_id = $1
+    ORDER BY c.last_price_eur DESC NULLS LAST
+    LIMIT $2 OFFSET $3
+  `;
 
-  const res = await query(queryText, [set_id]);
+  const res = await query(queryText, [set_id, limit, offset]);
 
   return res.rows;
 };
@@ -323,6 +334,7 @@ export const filterCards = async (filters) => {
     maxPrice,
     currency = "eur",
     limit = 50,
+    offset = 0,
   } = filters;
 
   const priceColumn = currency === "usd" ? "last_price_usd" : "last_price_eur";
@@ -400,9 +412,11 @@ export const filterCards = async (filters) => {
     ${whereClause}
     ORDER BY c.name ASC
     LIMIT $${paramIndex}
+    OFFSET $${paramIndex + 1}
   `;
 
   params.push(limit);
+  params.push(offset);
 
   const res = await query(queryText, params);
   return res.rows;

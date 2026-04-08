@@ -46,9 +46,10 @@ export const getCardPrice = async (req, res) => {
 
 export const getCardsFromSet = async (req, res) => {
     const { set_id } = req.params;
+    const limit = parseInt(req.query.limit) || 100;
+    const offset = parseInt(req.query.offset) || 0;
     try {
-        const cards = await getCardsFromSetService(set_id);
-
+        const cards = await getCardsFromSetService(set_id, limit, offset);
         res.json(cards);
     } catch (error) {
         res.status(500).json({ error: error.message });
@@ -255,6 +256,7 @@ export const filterCardsController = async (req, res) => {
             maxPrice: req.query.maxPrice,
             currency: req.query.currency || "eur",
             limit: parseInt(req.query.limit) || 50,
+            offset: parseInt(req.query.offset) || 0,
         };
 
         const cards = await filterCards(filters);

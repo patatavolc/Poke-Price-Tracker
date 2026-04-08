@@ -14,6 +14,12 @@ const nextConfig = {
                 port: "",
                 pathname: "/**",
             },
+            {
+                protocol: "https",
+                hostname: "images.scrydex.com",
+                port: "",
+                pathname: "/**",
+            },
         ],
     },
     async rewrites() {
