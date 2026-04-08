@@ -1,78 +1,97 @@
 import { query } from "../config/db.js";
 
 export const getCardByIdWithHistory = async (id) => {
-  const cardQuery = "SELECT * FROM cards WHERE id = $1";
-  const historyQuery =
-    "SELECT price_eur, price_usd, created_at FROM price_history WHERE card_id = $1 ORDER BY created_at ASC";
+    const cardQuery = `
+    SELECT c.*, s.name AS set_name
+    FROM cards c
+    LEFT JOIN sets s ON c.set_id = s.id
+    WHERE c.id = $1
+  `;
+    const historyQuery =
+        "SELECT price_eur, price_usd, created_at FROM price_history WHERE card_id = $1 ORDER BY created_at ASC";
 
-  const cardRes = await query(cardQuery, [id]);
+    const cardRes = await query(cardQuery, [id]);
 
-  if (cardRes.rows.length === 0) {
-    return null;
-  }
+    if (cardRes.rows.length === 0) {
+        return null;
+    }
 
-  const historyRes = await query(historyQuery, [id]);
+    const historyRes = await query(historyQuery, [id]);
 
-  // Calcular la media del historial de precios
-  const priceAverage =
-    historyRes.rows.length > 0
-      ? {
-          avg_price_eur: (
-            historyRes.rows.reduce(
-              (sum, entry) => sum + (parseFloat(entry.price_eur) || 0),
-              0,
-            ) / historyRes.rows.length
-          ).toFixed(2),
-          avg_price_usd: (
-            historyRes.rows.reduce(
-              (sum, entry) => sum + (parseFloat(entry.price_usd) || 0),
-              0,
-            ) / historyRes.rows.length
-          ).toFixed(2),
-          total_entries: historyRes.rows.length,
-        }
-      : {
-          avg_price_eur: null,
-          avg_price_usd: null,
-          total_entries: 0,
-        };
+    // Calcular la media del historial de precios
+    const priceAverage =
+        historyRes.rows.length > 0
+            ? {
+                  avg_price_eur: (
+                      historyRes.rows.reduce(
+                          (sum, entry) =>
+                              sum + (parseFloat(entry.price_eur) || 0),
+                          0,
+                      ) / historyRes.rows.length
+                  ).toFixed(2),
+                  avg_price_usd: (
+                      historyRes.rows.reduce(
+                          (sum, entry) =>
+                              sum + (parseFloat(entry.price_usd) || 0),
+                          0,
+                      ) / historyRes.rows.length
+                  ).toFixed(2),
+                  total_entries: historyRes.rows.length,
+              }
+            : {
+                  avg_price_eur: null,
+                  avg_price_usd: null,
+                  total_entries: 0,
+              };
 
-  return {
-    ...cardRes.rows[0],
-    history: historyRes.rows,
-    priceAverage: priceAverage,
-  };
+    return {
+        ...cardRes.rows[0],
+        history: historyRes.rows,
+        priceAverage: priceAverage,
+    };
 };
 
 export const getCardPriceService = async (id) => {
-  const queryText =
-    "SELECT id, name, last_price_eur, last_price_usd FROM cards WHERE id = $1";
+    const queryText =
+        "SELECT id, name, last_price_eur, last_price_usd FROM cards WHERE id = $1";
 
-  const res = await query(queryText, [id]);
+    const res = await query(queryText, [id]);
 
-  if (res.rows.length === 0) {
-    return null;
-  }
+    if (res.rows.length === 0) {
+        return null;
+    }
 
-  return res.rows[0];
+    return res.rows[0];
 };
 
-export const getCardsFromSetService = async (set_id) => {
-  const queryText =
-    "SELECT id, name, last_price_eur, last_price_usd FROM cards WHERE set_id = $1";
+export const getCardsFromSetService = async (
+    set_id,
+    limit = 100,
+    offset = 0,
+) => {
+    const queryText = `
+    SELECT c.id, c.name, c.image_small, c.rarity, c.last_price_eur, c.last_price_usd, s.name AS set_name
+    FROM cards c
+    JOIN sets s ON c.set_id = s.id
+    WHERE c.set_id = $1
+    ORDER BY c.last_price_eur DESC NULLS LAST
+    LIMIT $2 OFFSET $3
+  `;
 
-  const res = await query(queryText, [set_id]);
+    const res = await query(queryText, [set_id, limit, offset]);
 
-  return res.rows;
+    return res.rows;
 };
 
 // Cartas con mayor subida de precio
 export const getTrendingPriceIncreaseService = async (period = "24h") => {
-  const timeCondition =
-    period === "7d" ? "NOW() - INTERVAL '7 days'" : "NOW() - INTERVAL '1 day'";
+    const timeCondition =
+        period === "7d"
+            ? "NOW() - INTERVAL '7 days'"
+            : "NOW() - INTERVAL '1 day'";
 
-  // WITH crea una tabla temporal
-  const queryText = `
+    // WITH crea una tabla temporal
+    const queryText = `
   WITH price_changes AS (
       SELECT 
         c.id,
@@ -101,17 +120,19 @@ export const getTrendingPriceIncreaseService = async (period = "24h") => {
     ORDER BY change_percentage_eur DESC
     LIMIT 20
   `;
-  // LATERAL permite que las subconsulta use c.id
+    // LATERAL permite que las subconsulta use c.id
 
-  const res = await query(queryText);
-  return res.rows;
+    const res = await query(queryText);
+    return res.rows;
 };
 
 export const getTrendingPriceDecreaseService = async (period = "24h") => {
-  const timeCondition =
-    period === "7d" ? "NOW() - INTERVAL '7 days'" : "NOW() - INTERVAL '1 day'";
+    const timeCondition =
+        period === "7d"
+            ? "NOW() - INTERVAL '7 days'"
+            : "NOW() - INTERVAL '1 day'";
 
-  const queryText = `
+    const queryText = `
     WITH price_changes AS (
       SELECT 
         c.id,
@@ -141,17 +162,18 @@ export const getTrendingPriceDecreaseService = async (period = "24h") => {
     LIMIT 20
   `;
 
-  const res = await query(queryText);
-  return res.rows;
+    const res = await query(queryText);
+    return res.rows;
 };
 
 export const getMostExpensiveCardsService = async (
-  limit = 20,
-  currency = "eur",
+    limit = 20,
+    currency = "eur",
 ) => {
-  const priceColumn = currency === "usd" ? "last_price_usd" : "last_price_eur";
+    const priceColumn =
+        currency === "usd" ? "last_price_usd" : "last_price_eur";
 
-  const queryText = `
+    const queryText = `
     SELECT
       c.id,
       c.name,
@@ -167,14 +189,15 @@ export const getMostExpensiveCardsService = async (
     LIMIT $1
   `;
 
-  const res = await query(queryText, [limit]);
-  return res.rows;
+    const res = await query(queryText, [limit]);
+    return res.rows;
 };
 
 export const getCheapestCardsService = async (limit = 20, currency = "eur") => {
-  const priceColumn = currency === "usd" ? "last_price_usd" : "last_price_eur";
+    const priceColumn =
+        currency === "usd" ? "last_price_usd" : "last_price_eur";
 
-  const queryText = `
+    const queryText = `
     SELECT
       c.id,
       c.name,
@@ -190,13 +213,13 @@ export const getCheapestCardsService = async (limit = 20, currency = "eur") => {
     LIMIT $1
   `;
 
-  const res = await query(queryText, [limit]);
-  return res.rows;
+    const res = await query(queryText, [limit]);
+    return res.rows;
 };
 
 // Rangos de precio en un periodo
 export const getPriceRangeService = async (cardId, days = 30) => {
-  const queryText = `
+    const queryText = `
     SELECT
       MIN(price_eur) as min_price_eur,
       MAX(price_eur) as max_price_eur,
@@ -210,24 +233,25 @@ export const getPriceRangeService = async (cardId, days = 30) => {
       AND created_at >= NOW() - INTERVAL '1 day' * $2
   `;
 
-  const res = await query(queryText, [cardId, days]);
+    const res = await query(queryText, [cardId, days]);
 
-  if (res.rows.length === 0 || res.rows[0].data_points === "0") {
-    return null;
-  }
+    if (res.rows.length === 0 || res.rows[0].data_points === "0") {
+        return null;
+    }
 
-  return res.rows[0];
+    return res.rows[0];
 };
 
 // Verificar alerta de precio
 export const checkPriceAlertService = async (
-  cardId,
-  threshold,
-  currency = "eur",
+    cardId,
+    threshold,
+    currency = "eur",
 ) => {
-  const priceColumn = currency === "usd" ? "last_price_usd" : "last_price_eur";
+    const priceColumn =
+        currency === "usd" ? "last_price_usd" : "last_price_eur";
 
-  const queryText = `
+    const queryText = `
   SELECT
     id,
     name,
@@ -237,26 +261,26 @@ export const checkPriceAlertService = async (
   WHERE id = $1
   `;
 
-  const res = await query(queryText, [cardId]);
+    const res = await query(queryText, [cardId]);
 
-  if (res.rows.length === 0) {
-    return null;
-  }
+    if (res.rows.length === 0) {
+        return null;
+    }
 
-  const card = res.rows[0];
-  const isBelowThreshold =
-    parseFloat(card.current_price) <= parseFloat(threshold);
+    const card = res.rows[0];
+    const isBelowThreshold =
+        parseFloat(card.current_price) <= parseFloat(threshold);
 
-  return {
-    ...card,
-    threshold: parseFloat(threshold),
-    is_bellow_threshold: isBelowThreshold,
-    difference: parseFloat(threshold) - parseFloat(card.current_price),
-  };
+    return {
+        ...card,
+        threshold: parseFloat(threshold),
+        is_bellow_threshold: isBelowThreshold,
+        difference: parseFloat(threshold) - parseFloat(card.current_price),
+    };
 };
 
 export const compareCardPricesService = async (cardsIds) => {
-  const queryText = `
+    const queryText = `
   SELECT
     c.id,
     c.name,
@@ -271,8 +295,8 @@ export const compareCardPricesService = async (cardsIds) => {
   ORDER BY c.last_price_eur DESC
   `;
 
-  const res = await query(queryText, [cardsIds]);
-  return res.rows;
+    const res = await query(queryText, [cardsIds]);
+    return res.rows;
 };
 
 /**
@@ -283,7 +307,7 @@ export const compareCardPricesService = async (cardsIds) => {
  * @returns {Array} Cartas encontradas
  */
 export const searchCardsByName = async (searchTerm, limit = 20) => {
-  const queryText = `
+    const queryText = `
     SELECT
       c.id,
       c.name,
@@ -301,8 +325,8 @@ export const searchCardsByName = async (searchTerm, limit = 20) => {
     LIMIT $2
   `;
 
-  const res = await query(queryText, [`%${searchTerm}%`, limit]);
-  return res.rows;
+    const res = await query(queryText, [`%${searchTerm}%`, limit]);
+    return res.rows;
 };
 
 /**
@@ -312,77 +336,79 @@ export const searchCardsByName = async (searchTerm, limit = 20) => {
  * @returns {Array} Cartas filtradas
  */
 export const filterCards = async (filters) => {
-  const {
-    name,
-    setId,
-    rarity,
-    supertype,
-    types,
-    artist,
-    minPrice,
-    maxPrice,
-    currency = "eur",
-    limit = 50,
-  } = filters;
+    const {
+        name,
+        setId,
+        rarity,
+        supertype,
+        types,
+        artist,
+        minPrice,
+        maxPrice,
+        currency = "eur",
+        limit = 50,
+        offset = 0,
+    } = filters;
 
-  const priceColumn = currency === "usd" ? "last_price_usd" : "last_price_eur";
-  const conditions = [];
-  const params = [];
-  let paramIndex = 1;
+    const priceColumn =
+        currency === "usd" ? "last_price_usd" : "last_price_eur";
+    const conditions = [];
+    const params = [];
+    let paramIndex = 1;
 
-  // Construir condiciones dinámicamente
-  if (name) {
-    conditions.push(`c.name ILIKE $${paramIndex}`);
-    params.push(`%${name}%`);
-    paramIndex++;
-  }
+    // Construir condiciones dinámicamente
+    if (name) {
+        conditions.push(`c.name ILIKE $${paramIndex}`);
+        params.push(`%${name}%`);
+        paramIndex++;
+    }
 
-  if (setId) {
-    conditions.push(`c.set_id = $${paramIndex}`);
-    params.push(setId);
-    paramIndex++;
-  }
+    if (setId) {
+        conditions.push(`c.set_id = $${paramIndex}`);
+        params.push(setId);
+        paramIndex++;
+    }
 
-  if (rarity) {
-    conditions.push(`c.rarity = $${paramIndex}`);
-    params.push(rarity);
-    paramIndex++;
-  }
+    if (rarity) {
+        conditions.push(`c.rarity = $${paramIndex}`);
+        params.push(rarity);
+        paramIndex++;
+    }
 
-  if (supertype) {
-    conditions.push(`c.supertype = $${paramIndex}`);
-    params.push(supertype);
-    paramIndex++;
-  }
+    if (supertype) {
+        conditions.push(`c.supertype = $${paramIndex}`);
+        params.push(supertype);
+        paramIndex++;
+    }
 
-  if (types && types.length > 0) {
-    conditions.push(`c.types && $${paramIndex}::text[]`);
-    params.push(types);
-    paramIndex++;
-  }
+    if (types && types.length > 0) {
+        conditions.push(`c.types && $${paramIndex}::text[]`);
+        params.push(types);
+        paramIndex++;
+    }
 
-  if (artist) {
-    conditions.push(`c.artist ILIKE $${paramIndex}`);
-    params.push(`%${artist}%`);
-    paramIndex++;
-  }
+    if (artist) {
+        conditions.push(`c.artist ILIKE $${paramIndex}`);
+        params.push(`%${artist}%`);
+        paramIndex++;
+    }
 
-  if (minPrice !== undefined) {
-    conditions.push(`c.${priceColumn} >= $${paramIndex}`);
-    params.push(minPrice);
-    paramIndex++;
-  }
+    if (minPrice !== undefined) {
+        conditions.push(`c.${priceColumn} >= $${paramIndex}`);
+        params.push(minPrice);
+        paramIndex++;
+    }
 
-  if (maxPrice !== undefined) {
-    conditions.push(`c.${priceColumn} <= $${paramIndex}`);
-    params.push(maxPrice);
-    paramIndex++;
-  }
+    if (maxPrice !== undefined) {
+        conditions.push(`c.${priceColumn} <= $${paramIndex}`);
+        params.push(maxPrice);
+        paramIndex++;
+    }
 
-  const whereClause =
-    conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
+    const whereClause =
+        conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
 
-  const queryText = `
+    const queryText = `
     SELECT
       c.id,
       c.name,
@@ -400,10 +426,12 @@ export const filterCards = async (filters) => {
     ${whereClause}
     ORDER BY c.name ASC
     LIMIT $${paramIndex}
+    OFFSET $${paramIndex + 1}
   `;
 
-  params.push(limit);
+    params.push(limit);
+    params.push(offset);
 
-  const res = await query(queryText, params);
-  return res.rows;
+    const res = await query(queryText, params);
+    return res.rows;
 };

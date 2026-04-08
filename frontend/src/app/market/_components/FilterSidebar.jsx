@@ -32,6 +32,10 @@ export default function FilterSidebar({
     TYPES,
     SETS,
     RARITIES,
+    selectedSet,
+    setSelectedSet,
+    selectedRarity,
+    setSelectedRarity,
 }) {
     const [isTypesExpanded, setIsTypesExpanded] = useState(false);
 
@@ -154,11 +158,15 @@ export default function FilterSidebar({
                 <h3 className="font-medium text-brand-highlight mb-3">
                     Set de Expansión
                 </h3>
-                <select className="w-full px-3 py-2 bg-card-bg border border-ui-border text-gray-200 rounded-md text-sm focus:outline-none focus:border-brand-primary appearance-none">
+                <select
+                    value={selectedSet}
+                    onChange={(e) => setSelectedSet(e.target.value)}
+                    className="w-full px-3 py-2 bg-card-bg border border-ui-border text-gray-200 rounded-md text-sm focus:outline-none focus:border-brand-primary appearance-none"
+                >
                     <option value="">Todos los sets</option>
                     {SETS.map((set) => (
-                        <option key={set} value={set}>
-                            {set}
+                        <option key={set.id} value={set.id}>
+                            {set.name}
                         </option>
                     ))}
                 </select>
@@ -169,7 +177,11 @@ export default function FilterSidebar({
                 <h3 className="font-medium text-brand-highlight mb-3">
                     Rareza
                 </h3>
-                <select className="w-full px-3 py-2 bg-card-bg border border-ui-border text-gray-200 rounded-md text-sm focus:outline-none focus:border-brand-primary appearance-none">
+                <select
+                    value={selectedRarity}
+                    onChange={(e) => setSelectedRarity(e.target.value)}
+                    className="w-full px-3 py-2 bg-card-bg border border-ui-border text-gray-200 rounded-md text-sm focus:outline-none focus:border-brand-primary appearance-none"
+                >
                     <option value="">Todas las rarezas</option>
                     {RARITIES.map((rarity) => (
                         <option key={rarity} value={rarity}>
