@@ -16,6 +16,7 @@ import { query } from "../../config/db.js";
 import { getExchangeRate } from "../currency.service.js";
 import { getTCGPlayerPrice } from "./tcgplayer.provider.js";
 import { getCardmarketPrice } from "./cardmarket.provider.js";
+import { getTCGdexPrice } from "./tcgdex.provider.js";
 import { sleep } from "./utils.js";
 
 const POKEMON_TCG_API_URL = process.env.POKEMON_TCG_API_URL;
@@ -128,21 +129,26 @@ export const getAggregatedPrice = async (cardId, cardName, setName = "") => {
     const sourcesStatus = {
       tcgplayer: { attempted: true, success: false, price: null, error: null },
       cardmarket: { attempted: true, success: false, price: null, error: null },
+      tcgdex: { attempted: false, success: false, price: null, error: null },
     };
 
-    // Consultar ambas fuentes simultáneamente usando Promise.all
-    // Esto reduce el tiempo de espera al ejecutar las peticiones en paralelo
-    // en lugar de secuencialmente
+    // Paso 1: Consultar TCGPlayer y Cardmarket (ambos en pokemontcg.io) en paralelo
     const [tcgplayerPrice, cardmarketPrice] = await Promise.all([
       getTCGPlayerPrice(cardId),
       getCardmarketPrice(cardId),
     ]);
 
+    // Paso 1b: Si Cardmarket de pokemontcg.io no tiene precio, intentar TCGdex como fallback
+    let tcgdexPrice = null;
+    if (!cardmarketPrice) {
+      sourcesStatus.tcgdex.attempted = true;
+      console.log(`\nPASO 1b: Cardmarket sin precio en pokemontcg.io, consultando TCGdex...`);
+      tcgdexPrice = await getTCGdexPrice(cardId);
+    }
+
     console.log(`\nPASO 2: Procesar resultados...`);
-    // Array para almacenar solo los precios válidos obtenidos
     const validPrices = [];
 
-    // Procesar resultado de TCGPlayer (si existe)
     if (tcgplayerPrice) {
       const priceData = {
         source: tcgplayerPrice.source,
@@ -152,47 +158,53 @@ export const getAggregatedPrice = async (cardId, cardName, setName = "") => {
       validPrices.push(priceData);
       sourcesStatus.tcgplayer.success = true;
       sourcesStatus.tcgplayer.price = priceData;
-      console.log(
-        `✅ TCGPlayer: $${priceData.priceUsd} / €${priceData.priceEur.toFixed(2)}`,
-      );
+      console.log(`✅ TCGPlayer: $${priceData.priceUsd} / €${priceData.priceEur.toFixed(2)}`);
     } else {
       sourcesStatus.tcgplayer.error = "Sin datos de precio disponibles";
       console.log(`❌ TCGPlayer: No disponible`);
     }
 
-    // Procesar resultado de Cardmarket (si existe)
     if (cardmarketPrice) {
-      // Crear objeto de precio con conversión EUR -> USD
       const priceData = {
         source: cardmarketPrice.source,
         priceEur: cardmarketPrice.priceEur,
-        priceUsd: cardmarketPrice.priceEur * eurToUsdRate, // Convertir USD usando tasa de cambio
+        priceUsd: cardmarketPrice.priceEur * eurToUsdRate,
       };
       validPrices.push(priceData);
       sourcesStatus.cardmarket.success = true;
       sourcesStatus.cardmarket.price = priceData;
-      console.log(
-        `✅ Cardmarket: €${priceData.priceEur} / $${priceData.priceUsd.toFixed(2)}`,
-      );
+      console.log(`✅ Cardmarket: €${priceData.priceEur} / $${priceData.priceUsd.toFixed(2)}`);
     } else {
       sourcesStatus.cardmarket.error = "Sin datos de precio disponibles";
-      console.log(`❌ Cardmarket: No disponible`);
+      console.log(`❌ Cardmarket (pokemontcg.io): No disponible`);
+    }
+
+    if (tcgdexPrice) {
+      const priceData = {
+        source: tcgdexPrice.source,
+        priceEur: tcgdexPrice.priceEur,
+        priceUsd: tcgdexPrice.priceEur * eurToUsdRate,
+      };
+      validPrices.push(priceData);
+      sourcesStatus.tcgdex.success = true;
+      sourcesStatus.tcgdex.price = priceData;
+      console.log(`✅ TCGdex: €${priceData.priceEur} / $${priceData.priceUsd.toFixed(2)}`);
+    } else if (sourcesStatus.tcgdex.attempted) {
+      sourcesStatus.tcgdex.error = "Sin datos de precio disponibles";
+      console.log(`❌ TCGdex: No disponible`);
     }
 
     // Resumen de fuentes
-    const successCount = Object.values(sourcesStatus).filter(
-      (s) => s.success,
-    ).length;
-    const failedCount = Object.values(sourcesStatus).filter(
-      (s) => !s.success,
-    ).length;
+    const successCount = Object.values(sourcesStatus).filter((s) => s.success).length;
+    const attemptedCount = Object.values(sourcesStatus).filter((s) => s.attempted).length;
+    const failedCount = Object.values(sourcesStatus).filter((s) => s.attempted && !s.success).length;
 
     console.log(`\nRESUMEN DE FUENTES:`);
-    console.log(`  ✅ Exitosas: ${successCount}/2`);
-    console.log(`  ❌ Fallidas: ${failedCount}/2`);
+    console.log(`  ✅ Exitosas: ${successCount}/${attemptedCount}`);
+    console.log(`  ❌ Fallidas: ${failedCount}/${attemptedCount}`);
     if (failedCount > 0) {
       const failed = Object.entries(sourcesStatus)
-        .filter(([_, status]) => !status.success)
+        .filter(([_, status]) => status.attempted && !status.success)
         .map(([name, _]) => name);
       console.log(`  Fuentes fallidas: ${failed.join(", ")}`);
     }
@@ -216,7 +228,7 @@ export const getAggregatedPrice = async (cardId, cardName, setName = "") => {
     console.log(`RESULTADO FINAL:`);
     console.log(`  Precio promedio EUR: €${avgEur.toFixed(2)}`);
     console.log(`  Precio promedio USD: $${avgUsd.toFixed(2)}`);
-    console.log(`  Fuentes exitosas: ${validPrices.length}/2`);
+    console.log(`  Fuentes exitosas: ${validPrices.length}/${attemptedCount}`);
     console.log(`  Fuentes: ${validPrices.map((p) => p.source).join(", ")}`);
     console.log(`${"=".repeat(80)}\n`);
 

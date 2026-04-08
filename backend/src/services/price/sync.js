@@ -161,9 +161,9 @@ export const syncMissingPrices = async (dailyLimit = null) => {
       FROM cards 
       WHERE (last_price_usd IS NULL OR last_price_eur IS NULL)
         AND id NOT IN (
-          SELECT card_id 
-          FROM cards_without_price 
-          WHERE attempt_count >= 2
+          SELECT card_id
+          FROM cards_without_price
+          WHERE attempt_count >= 5
         )
       ORDER BY id
     `;

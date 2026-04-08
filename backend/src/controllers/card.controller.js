@@ -255,15 +255,16 @@ export const filterCardsController = async (req, res) => {
             minPrice: req.query.minPrice,
             maxPrice: req.query.maxPrice,
             currency: req.query.currency || "eur",
+            hasPrice: req.query.hasPrice !== "false",
             limit: parseInt(req.query.limit) || 50,
             offset: parseInt(req.query.offset) || 0,
         };
 
-        const cards = await filterCards(filters);
+        const { rows: cards, total } = await filterCards(filters);
 
         res.json({
             success: true,
-            count: cards.length,
+            count: total,
             filters: filters,
             data: cards,
         });

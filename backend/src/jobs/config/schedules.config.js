@@ -39,7 +39,7 @@ export const SCHEDULES = {
     cron: "0 4 * * 0",
     enabled: true,
     description: "Reintentar cartas sin precio disponible",
-    olderThanDays: 30,
+    olderThanDays: 7,
   },
 };
 
