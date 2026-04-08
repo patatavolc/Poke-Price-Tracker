@@ -9,25 +9,32 @@ import { useMarketCards } from "../../hooks/useMarketCards";
 import { getSets } from "../../lib/api/sets";
 
 const TYPES = [
-    "Normal",
+    "Incoloro",
     "Fuego",
     "Agua",
     "Planta",
     "Eléctrico",
-    "Hielo",
-    "Lucha",
-    "Veneno",
-    "Tierra",
-    "Volador",
     "Psíquico",
-    "Bicho",
-    "Roca",
-    "Fantasma",
-    "Dragón",
-    "Siniestro",
-    "Acero",
+    "Lucha",
+    "Oscuridad",
+    "Metal",
     "Hada",
+    "Dragón",
 ];
+
+const TYPE_API_MAP = {
+    Incoloro: "Colorless",
+    Fuego: "Fire",
+    Agua: "Water",
+    Planta: "Grass",
+    Eléctrico: "Lightning",
+    Psíquico: "Psychic",
+    Lucha: "Fighting",
+    Oscuridad: "Darkness",
+    Metal: "Metal",
+    Hada: "Fairy",
+    Dragón: "Dragon",
+};
 const RARITIES = [
     "Común",
     "Infrecuente",
@@ -52,6 +59,7 @@ export default function MarketPage() {
     const { cards, totalCount, loading, error } = useMarketCards({
         debouncedSearch,
         selectedTypes,
+        typeApiMap: TYPE_API_MAP,
         priceRange,
         selectedSet,
         selectedRarity,

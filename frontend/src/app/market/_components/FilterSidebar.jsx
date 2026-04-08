@@ -4,24 +4,17 @@ import Image from "next/image";
 
 // Mapa de los tipos en español con el nombre del icono SVG en inglés
 const TYPE_ICONS = {
-    Normal: "normal",
+    Incoloro: "normal",
     Fuego: "fire",
     Agua: "water",
     Planta: "grass",
     Eléctrico: "electric",
-    Hielo: "ice",
-    Lucha: "fighting",
-    Veneno: "poison",
-    Tierra: "ground",
-    Volador: "flying",
     Psíquico: "psychic",
-    Bicho: "bug",
-    Roca: "rock",
-    Fantasma: "ghost",
-    Dragón: "dragon",
-    Siniestro: "dark",
-    Acero: "steel",
+    Lucha: "fighting",
+    Oscuridad: "dark",
+    Metal: "steel",
     Hada: "fairy",
+    Dragón: "dragon",
 };
 
 export default function FilterSidebar({

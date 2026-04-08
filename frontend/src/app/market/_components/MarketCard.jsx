@@ -36,7 +36,7 @@ export default function MarketCard({ card }) {
                             {card.type || ""}
                         </span>
                         <span className="font-bold text-lg text-brand-primary">
-                            {price !== null ? `${price.toFixed(2)} €` : "— €"}
+                            {price !== null ? `${price.toFixed(2)} €` : "Precio desconocido"}
                         </span>
                     </div>
                 </div>
