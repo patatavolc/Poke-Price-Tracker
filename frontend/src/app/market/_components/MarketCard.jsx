@@ -5,7 +5,8 @@ import Image from "next/image";
 export default function MarketCard({ card }) {
     // Adaptar los campos a la respuesta real del backend
     // image_small, set_name, rarity, last_price_eur, last_price_usd
-    const price = Number(card.last_price_eur ?? card.last_price_usd ?? 0);
+    const priceRaw = card.last_price_eur ?? card.last_price_usd ?? null;
+    const price = priceRaw !== null ? Number(priceRaw) : null;
     const imageSrc = card.image_small || card.image_large || null;
     if (!imageSrc) return null;
     return (
@@ -35,7 +36,7 @@ export default function MarketCard({ card }) {
                             {card.type || ""}
                         </span>
                         <span className="font-bold text-lg text-brand-primary">
-                            {price.toFixed(2)} €
+                            {price !== null ? `${price.toFixed(2)} €` : "— €"}
                         </span>
                     </div>
                 </div>

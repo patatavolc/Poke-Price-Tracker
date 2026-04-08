@@ -67,9 +67,9 @@ export async function updateNormalPricesTask(batchSize = 100) {
         AND ph.created_at > NOW() - INTERVAL '6 hours'
       WHERE ph.id IS NULL
         AND c.id NOT IN (
-          SELECT card_id 
-          FROM cards_without_price 
-          WHERE attempt_count >= 3
+          SELECT card_id
+          FROM cards_without_price
+          WHERE attempt_count >= 5
         )
       ORDER BY RANDOM()
       LIMIT $1

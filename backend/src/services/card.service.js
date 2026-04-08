@@ -74,6 +74,7 @@ export const getCardsFromSetService = async (
     FROM cards c
     JOIN sets s ON c.set_id = s.id
     WHERE c.set_id = $1
+      AND (c.last_price_eur IS NOT NULL OR c.last_price_usd IS NOT NULL)
     ORDER BY c.last_price_eur DESC NULLS LAST
     LIMIT $2 OFFSET $3
   `;
@@ -348,6 +349,7 @@ export const filterCards = async (filters) => {
         currency = "eur",
         limit = 50,
         offset = 0,
+        hasPrice = true,
     } = filters;
 
     const priceColumn =
@@ -355,6 +357,10 @@ export const filterCards = async (filters) => {
     const conditions = [];
     const params = [];
     let paramIndex = 1;
+
+    if (hasPrice) {
+        conditions.push(`(c.last_price_eur IS NOT NULL OR c.last_price_usd IS NOT NULL)`);
+    }
 
     // Construir condiciones dinámicamente
     if (name) {
@@ -432,6 +438,17 @@ export const filterCards = async (filters) => {
     params.push(limit);
     params.push(offset);
 
-    const res = await query(queryText, params);
-    return res.rows;
+    const countQuery = `
+    SELECT COUNT(*) as total
+    FROM cards c
+    LEFT JOIN sets s ON c.set_id = s.id
+    ${whereClause}
+  `;
+
+    const [res, countRes] = await Promise.all([
+        query(queryText, params),
+        query(countQuery, params.slice(0, -2)),
+    ]);
+
+    return { rows: res.rows, total: parseInt(countRes.rows[0].total) };
 };

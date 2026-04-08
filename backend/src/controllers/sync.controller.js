@@ -8,6 +8,7 @@ import { updateAllPricesTask } from "../jobs/task/updatePrices.task.js";
 import { syncMissingPrices, syncAllPrices } from "../services/price/sync.js";
 import { priceQueue } from "../jobs/queues/priceQueue.js";
 import { tryCatch } from "bullmq";
+import { query } from "../config/db.js";
 
 export const syncSets = async (req, res) => {
     try {
@@ -147,4 +148,16 @@ export const getQueueStatus = async (req, res) => {
     } catch (error) {
         res.status(500).json({ error: "Error obteniendo estado de la cola" });
     }
+};
+
+export const resetBlacklist = async (req, res) => {
+  try {
+    const result = await query("DELETE FROM cards_without_price");
+    res.status(200).json({
+      message: "Blacklist limpiado correctamente",
+      deleted: result.rowCount,
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
 };

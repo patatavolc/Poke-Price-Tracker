@@ -53,6 +53,7 @@ export function useMarketCards({
                         set: selectedSet || undefined,
                         minPrice: priceRange.min || undefined,
                         maxPrice: priceRange.max || undefined,
+                        hasPrice: true,
                         limit: PAGE_SIZE,
                         offset,
                     });
@@ -72,7 +73,7 @@ export function useMarketCards({
 
                     if (data.length === 0) {
                         // El set más reciente no tiene cartas con precio → mostrar generales
-                        const { cards: fallback, count } = await filterCards({ limit: PAGE_SIZE, offset });
+                        const { cards: fallback, count } = await filterCards({ hasPrice: true, limit: PAGE_SIZE, offset });
                         if (!cancelled) {
                             setCards(fallback);
                             setTotalCount(count);
