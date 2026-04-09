@@ -18,4 +18,6 @@ export const query = (text, params) => {
     return pool.query(text, params);
 };
 
+export const getClient = () => pool.connect();
+
 export default pool;

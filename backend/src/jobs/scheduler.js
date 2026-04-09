@@ -12,6 +12,7 @@ import {
   updateNormalPricesTask,
 } from "./task/updatePrices.task.js";
 import { retryWithoutPriceTask } from "./task/retryWithoutPrice.task.js";
+import { rotatePackSetsTask } from "./task/rotatePackSets.task.js";
 import { fillInitialPrices } from "./utils/fillInitialPrices.js";
 
 class SchedulerManager {
@@ -164,6 +165,13 @@ export async function startAllSchedulers(fillPricesFirst = false) {
     SCHEDULES.RETRY_WITHOUT_PRICE.cron,
     () => retryWithoutPriceTask(SCHEDULES.RETRY_WITHOUT_PRICE.olderThanDays),
     SCHEDULES.RETRY_WITHOUT_PRICE.enabled,
+  );
+
+  scheduler.register(
+    "ROTATE_PACK_SETS",
+    SCHEDULES.ROTATE_PACK_SETS.cron,
+    rotatePackSetsTask,
+    SCHEDULES.ROTATE_PACK_SETS.enabled,
   );
 
   // Iniciar scheduler

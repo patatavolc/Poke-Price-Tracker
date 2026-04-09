@@ -18,7 +18,7 @@ export default function Home() {
     // FlipCard: 5 cartas aleatorias de rareza alta
     useEffect(() => {
         fetch(
-            `/api/cards/filter?rarity=Rare Holo&minPrice=50&currency=${currency}&limit=20`,
+            `/api/cards/filter?rarity=Rare Secret&minPrice=0&currency=${currency}&limit=20`,
         )
             .then((res) => res.json())
             .then((data) => {
