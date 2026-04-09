@@ -41,6 +41,13 @@ export const SCHEDULES = {
     description: "Reintentar cartas sin precio disponible",
     olderThanDays: 7,
   },
+
+  // Rotacion de sets del pack opener - cada 3 dias a medianoche
+  ROTATE_PACK_SETS: {
+    cron: "0 0 */3 * *",
+    enabled: true,
+    description: "Rotar sets disponibles en el pack opener",
+  },
 };
 
 // Configuracin de llenado inicial

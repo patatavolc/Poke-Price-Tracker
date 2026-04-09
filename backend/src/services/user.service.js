@@ -20,7 +20,7 @@ export const findUserByUsername = async (username) => {
 export const findUserById = async (id) => {
     // Se excluye el hash de la contraseña por seguridad
     const text =
-        "SELECT id, username, name, role, coins, created_at FROM users where id = $1";
+        "SELECT id, username, name, role, coins, daily_streak, last_daily_claim, created_at FROM users WHERE id = $1";
     const res = await query(text, [id]);
     return res.rows[0];
 };

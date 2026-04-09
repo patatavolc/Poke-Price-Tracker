@@ -162,7 +162,18 @@ AS $$
 BEGIN
     INSERT INTO user_cards (user_id, card_id, quantity)
     VALUES (p_user_id, p_card_id, 1)
-    ON CONFLICT (user_id, card_id) 
+    ON CONFLICT (user_id, card_id)
     DO UPDATE SET quantity = user_cards.quantity + 1;
 END;
 $$;
+
+-- MIGRACIÓN: Pack Opener (2026-04-09)
+-- ALTER TABLE users
+--   ADD COLUMN IF NOT EXISTS last_daily_claim TIMESTAMP WITH TIME ZONE,
+--   ADD COLUMN IF NOT EXISTS daily_streak INTEGER DEFAULT 0;
+--
+-- CREATE TABLE IF NOT EXISTS rotating_sets (
+--   id         SERIAL PRIMARY KEY,
+--   set_id     VARCHAR(50) UNIQUE REFERENCES sets(id) ON DELETE CASCADE,
+--   expires_at TIMESTAMP WITH TIME ZONE NOT NULL
+-- );
