@@ -48,7 +48,8 @@ CREATE TABLE users (
 
   coins INTEGER DEFAULT 1000,
   token_version INTEGER DEFAULT 0,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT current_timestamp
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT current_timestamp,
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT current_timestamp
 );
 
 CREATE TABLE user_cards (

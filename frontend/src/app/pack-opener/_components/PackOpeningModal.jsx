@@ -17,6 +17,7 @@ export default function PackOpeningModal({ cards, onOpenAnother, onExit }) {
   const handleFlipped = () => setRevealed(true);
 
   const handleNext = () => {
+    if (isLast) return;
     setCurrentIndex((i) => i + 1);
     setRevealed(false);
   };
@@ -31,33 +32,23 @@ export default function PackOpeningModal({ cards, onOpenAnother, onExit }) {
         key={currentIndex}
         card={cards[currentIndex]}
         onFlipped={handleFlipped}
+        onNext={handleNext}
       />
 
-      {revealed && (
+      {revealed && isLast && (
         <div className="flex gap-4 mt-2">
-          {!isLast ? (
-            <button
-              onClick={handleNext}
-              className="px-6 py-2 bg-brand-highlight text-black font-bold rounded-lg hover:bg-brand-primary transition-colors"
-            >
-              Siguiente →
-            </button>
-          ) : (
-            <>
-              <button
-                onClick={onOpenAnother}
-                className="px-6 py-2 bg-brand-highlight text-black font-bold rounded-lg hover:bg-brand-primary transition-colors"
-              >
-                Abrir otro sobre
-              </button>
-              <button
-                onClick={onExit}
-                className="px-6 py-2 bg-ui-border text-white font-bold rounded-lg hover:bg-card-bg transition-colors"
-              >
-                Salir
-              </button>
-            </>
-          )}
+          <button
+            onClick={onOpenAnother}
+            className="px-6 py-2 bg-brand-highlight text-black font-bold rounded-lg hover:bg-brand-primary transition-colors"
+          >
+            Abrir otro sobre
+          </button>
+          <button
+            onClick={onExit}
+            className="px-6 py-2 bg-ui-border text-white font-bold rounded-lg hover:bg-card-bg transition-colors"
+          >
+            Salir
+          </button>
         </div>
       )}
     </div>

@@ -14,12 +14,16 @@ const RARITY_BADGE = {
  * Props:
  * - card: { id, name, image_small, image_large, rarity }
  * - onFlipped: () => void — called when flip completes
+ * - onNext: () => void — called when flipped card is clicked to advance
  */
-export default function CardFlip({ card, onFlipped }) {
+export default function CardFlip({ card, onFlipped, onNext }) {
   const [flipped, setFlipped] = useState(false);
 
   const handleClick = () => {
-    if (flipped) return;
+    if (flipped) {
+      onNext?.();
+      return;
+    }
     setFlipped(true);
     onFlipped?.();
   };
@@ -43,10 +47,14 @@ export default function CardFlip({ card, onFlipped }) {
       >
         {/* Dorso */}
         <div
-          className="absolute inset-0 rounded-xl bg-card-bg border-2 border-ui-border flex items-center justify-center"
+          className="absolute inset-0 rounded-xl overflow-hidden"
           style={{ backfaceVisibility: "hidden" }}
         >
-          <span className="text-6xl text-brand-highlight">?</span>
+          <img
+            src="/images/card-back.png"
+            alt="Card back"
+            className="w-full h-full object-cover"
+          />
         </div>
 
         {/* Frente */}
