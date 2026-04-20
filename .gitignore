@@ -141,4 +141,5 @@ vite.config.ts.timestamp-*
 # Claude Code
 .claude/
 .superpowers/
-.docs/superpowers/
+docs/superpowers/
+docs/specs
