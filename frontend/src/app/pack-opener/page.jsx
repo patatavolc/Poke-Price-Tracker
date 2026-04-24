@@ -1,5 +1,6 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
+import { animate } from "animejs";
 import SetGrid from "./_components/SetGrid";
 import PackOpeningModal from "./_components/PackOpeningModal";
 import DailyClaimBanner from "./_components/DailyClaimBanner";
@@ -15,6 +16,10 @@ export default function PackOpenerPage() {
   const [error, setError] = useState(null);
   const [openingCards, setOpeningCards] = useState(null);
   const [opening, setOpening] = useState(false);
+
+  const openBtnRef   = useRef(null);
+  const coinsRef     = useRef(null);
+  const pulseAnimRef = useRef(null);
 
   useEffect(() => {
     if (authLoading) return;
@@ -32,6 +37,39 @@ export default function PackOpenerPage() {
       })
       .finally(() => setLoading(false));
   }, [authLoading, authUser]);
+
+  // Bounce del contador de monedas cuando cambia
+  useEffect(() => {
+    if (coinsRef.current && user?.coins !== undefined) {
+      animate(coinsRef.current, {
+        scale: [1.45, 1.0],
+        duration: 420,
+        ease: "outElastic(1, .4)",
+      });
+    }
+  }, [user?.coins]);
+
+  // Pulse del botón "Abrir Sobre" cuando hay set seleccionado y monedas suficientes
+  useEffect(() => {
+    if (pulseAnimRef.current) {
+      pulseAnimRef.current.pause();
+      pulseAnimRef.current = null;
+    }
+    if (selectedSet && (user?.coins ?? 0) >= 100 && openBtnRef.current) {
+      pulseAnimRef.current = animate(openBtnRef.current, {
+        scale: [1.0, 1.035, 1.0],
+        duration: 1200,
+        loop: true,
+        ease: "inOutSine",
+      });
+    }
+    return () => {
+      if (pulseAnimRef.current) {
+        pulseAnimRef.current.pause();
+        pulseAnimRef.current = null;
+      }
+    };
+  }, [selectedSet, user?.coins]);
 
   const handleOpenPack = async () => {
     if (!selectedSet || opening) return;
@@ -93,7 +131,7 @@ export default function PackOpenerPage() {
   }
 
   return (
-    <div className="min-h-screen bg-card-bg text-gray-200">
+    <div className="min-h-screen bg-card-bg text-gray-200 scanlines">
       {openingCards && (
         <PackOpeningModal
           cards={openingCards}
@@ -109,7 +147,7 @@ export default function PackOpenerPage() {
             Abrir Sobres
           </h1>
           <div className="flex items-center gap-4">
-            <span className="text-brand-highlight font-semibold">
+            <span ref={coinsRef} className="text-brand-highlight font-semibold inline-block">
               🪙 {user?.coins ?? 0} monedas
             </span>
             <DailyClaimBanner
@@ -136,6 +174,7 @@ export default function PackOpenerPage() {
               </span>
             </p>
             <button
+              ref={openBtnRef}
               onClick={handleOpenPack}
               disabled={opening || (user?.coins ?? 0) < 100}
               className="px-8 py-3 bg-brand-highlight text-black font-bold text-lg rounded-xl hover:bg-brand-primary transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
