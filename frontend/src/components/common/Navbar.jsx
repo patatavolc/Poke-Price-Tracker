@@ -44,10 +44,10 @@ export default function Navbar() {
                         </li>
                         <li>
                             <Link
-                                href="/profile"
+                                href="/coleccion"
                                 className="text-lg text-white hover:text-brand-highlight transition-colors"
                             >
-                                Colleccion
+                                Colección
                             </Link>
                         </li>
                     </ul>
