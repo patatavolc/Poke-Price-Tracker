@@ -71,3 +71,17 @@ export const getProfile = async (req, res) => {
         res.status(500).json({ error: "Error al obtener perfil" });
     }
 };
+
+export const refreshToken = async (req, res) => {
+    try {
+        const user = await userService.findUserById(req.user.id);
+        if (!user) {
+            return res.status(404).json({ error: "Usuario no encontrado" });
+        }
+        const token = generateToken(user);
+        const { password_hash, ...userWithoutPassword } = user;
+        res.json({ user: userWithoutPassword, token });
+    } catch (error) {
+        res.status(500).json({ error: "Error al renovar token" });
+    }
+};
