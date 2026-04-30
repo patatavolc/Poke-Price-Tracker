@@ -82,6 +82,7 @@ export const refreshToken = async (req, res) => {
         const { password_hash, ...userWithoutPassword } = user;
         res.json({ user: userWithoutPassword, token });
     } catch (error) {
+        console.error(error);
         res.status(500).json({ error: "Error al renovar token" });
     }
 };

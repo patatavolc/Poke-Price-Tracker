@@ -43,6 +43,7 @@ export function AuthProvider({ children }) {
           } catch {
             localStorage.removeItem("token");
             localStorage.removeItem("auth_user");
+            setUser(null);
           }
         } else {
           setUser(userData);
