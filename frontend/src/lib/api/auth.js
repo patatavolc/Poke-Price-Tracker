@@ -28,3 +28,17 @@ export const registerUser = async ({ username, password, name }) => {
   }
   return res.json(); // { user, token }
 };
+
+export const refreshTokenApi = async (currentToken) => {
+  const res = await fetch(`${BASE}/auth/refresh`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${currentToken}`,
+    },
+  });
+  if (!res.ok) {
+    throw new Error("No se pudo renovar el token");
+  }
+  return res.json(); // { user, token }
+};
