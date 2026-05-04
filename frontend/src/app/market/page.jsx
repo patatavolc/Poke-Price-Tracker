@@ -62,6 +62,7 @@ export default function MarketPage() {
     const [selectedSet, setSelectedSet] = useState("");
     const [selectedRarity, setSelectedRarity] = useState("");
     const [page, setPage] = useState(1);
+    const [sortBy, setSortBy] = useState("name_asc");
     const [SETS, setSETS] = useState([]);
 
     const debouncedSearch = useDebounce(searchTerm, 400);
@@ -73,6 +74,7 @@ export default function MarketPage() {
         priceRange,
         selectedSet,
         selectedRarity: RARITY_API_MAP[selectedRarity] || selectedRarity,
+        sortBy,
         page,
     });
 
@@ -94,6 +96,7 @@ export default function MarketPage() {
         priceRange,
         selectedSet,
         selectedRarity,
+        sortBy,
     ]);
 
     const handlePrevPage = () => {
@@ -130,6 +133,8 @@ export default function MarketPage() {
                         setSelectedSet={setSelectedSet}
                         selectedRarity={selectedRarity}
                         setSelectedRarity={setSelectedRarity}
+                        sortBy={sortBy}
+                        setSortBy={setSortBy}
                     />
                     <section className="flex-1">
                         <SearchBar
