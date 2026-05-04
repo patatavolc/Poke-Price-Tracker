@@ -24,6 +24,7 @@ export async function filterCards({
     minPrice,
     maxPrice,
     hasPrice,
+    sortBy,
     limit = 20,
     offset = 0,
 } = {}) {
@@ -35,6 +36,7 @@ export async function filterCards({
     if (minPrice) params.append("minPrice", minPrice);
     if (maxPrice) params.append("maxPrice", maxPrice);
     if (hasPrice === false) params.append("hasPrice", "false");
+    if (sortBy) params.append("sortBy", sortBy);
     params.append("limit", limit);
     params.append("offset", offset);
 
