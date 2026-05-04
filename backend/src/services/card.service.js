@@ -350,6 +350,7 @@ export const filterCards = async (filters) => {
         limit = 50,
         offset = 0,
         hasPrice = true,
+        sortBy = "name_asc",
     } = filters;
 
     const priceColumn =
@@ -414,6 +415,11 @@ export const filterCards = async (filters) => {
     const whereClause =
         conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
 
+    const orderClause =
+        sortBy === "price_desc" ? "ORDER BY c.last_price_eur DESC NULLS LAST" :
+        sortBy === "price_asc"  ? "ORDER BY c.last_price_eur ASC NULLS LAST" :
+                                  "ORDER BY c.name ASC";
+
     const queryText = `
     SELECT
       c.id,
@@ -430,7 +436,7 @@ export const filterCards = async (filters) => {
     FROM cards c
     LEFT JOIN sets s ON c.set_id = s.id
     ${whereClause}
-    ORDER BY c.name ASC
+    ${orderClause}
     LIMIT $${paramIndex}
     OFFSET $${paramIndex + 1}
   `;
