@@ -256,6 +256,7 @@ export const filterCardsController = async (req, res) => {
             maxPrice: req.query.maxPrice,
             currency: req.query.currency || "eur",
             hasPrice: req.query.hasPrice !== "false",
+            sortBy: req.query.sortBy,
             limit: parseInt(req.query.limit) || 50,
             offset: parseInt(req.query.offset) || 0,
         };

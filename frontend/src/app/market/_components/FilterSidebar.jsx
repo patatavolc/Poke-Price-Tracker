@@ -29,6 +29,8 @@ export default function FilterSidebar({
     setSelectedSet,
     selectedRarity,
     setSelectedRarity,
+    sortBy,
+    setSortBy,
 }) {
     const [isTypesExpanded, setIsTypesExpanded] = useState(false);
 
@@ -181,6 +183,22 @@ export default function FilterSidebar({
                             {rarity}
                         </option>
                     ))}
+                </select>
+            </div>
+
+            {/* Filtro: Ordenación */}
+            <div>
+                <h3 className="font-medium text-brand-highlight mb-3">
+                    Ordenar por
+                </h3>
+                <select
+                    value={sortBy}
+                    onChange={(e) => setSortBy(e.target.value)}
+                    className="w-full px-3 py-2 bg-card-bg border border-ui-border text-gray-200 rounded-md text-sm focus:outline-none focus:border-brand-primary appearance-none"
+                >
+                    <option value="name_asc">Nombre (A-Z)</option>
+                    <option value="price_desc">Precio: mayor a menor</option>
+                    <option value="price_asc">Precio: menor a mayor</option>
                 </select>
             </div>
 

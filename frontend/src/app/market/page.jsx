@@ -43,6 +43,16 @@ const RARITIES = [
     "Ultra Rara",
     "Secreta",
 ];
+
+const RARITY_API_MAP = {
+    "Común":       "Common",
+    "Infrecuente": "Uncommon",
+    "Rara":        "Rare",
+    "Rara Holo":   "Rare Holo",
+    "Ultra Rara":  "Ultra Rare",
+    "Secreta":     "Secret Rare",
+};
+
 const PAGE_SIZE = 20;
 
 export default function MarketPage() {
@@ -52,6 +62,7 @@ export default function MarketPage() {
     const [selectedSet, setSelectedSet] = useState("");
     const [selectedRarity, setSelectedRarity] = useState("");
     const [page, setPage] = useState(1);
+    const [sortBy, setSortBy] = useState("name_asc");
     const [SETS, setSETS] = useState([]);
 
     const debouncedSearch = useDebounce(searchTerm, 400);
@@ -62,7 +73,8 @@ export default function MarketPage() {
         typeApiMap: TYPE_API_MAP,
         priceRange,
         selectedSet,
-        selectedRarity,
+        selectedRarity: RARITY_API_MAP[selectedRarity] || selectedRarity,
+        sortBy,
         page,
     });
 
@@ -84,6 +96,7 @@ export default function MarketPage() {
         priceRange,
         selectedSet,
         selectedRarity,
+        sortBy,
     ]);
 
     const handlePrevPage = () => {
@@ -120,6 +133,8 @@ export default function MarketPage() {
                         setSelectedSet={setSelectedSet}
                         selectedRarity={selectedRarity}
                         setSelectedRarity={setSelectedRarity}
+                        sortBy={sortBy}
+                        setSortBy={setSortBy}
                     />
                     <section className="flex-1">
                         <SearchBar
