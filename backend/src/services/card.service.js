@@ -86,56 +86,11 @@ export const getCardsFromSetService = async (
 
 // Cartas con mayor subida de precio
 export const getTrendingPriceIncreaseService = async (period = "24h") => {
-    const timeCondition =
-        period === "7d"
-            ? "NOW() - INTERVAL '7 days'"
-            : "NOW() - INTERVAL '1 day'";
+    const intervalDays = period === "7d" ? 7 : 1;
 
-    // WITH crea una tabla temporal
     const queryText = `
   WITH price_changes AS (
-      SELECT 
-        c.id,
-        c.name,
-        c.image_small,
-        c.last_price_eur,
-        c.last_price_usd,
-        ph_old.price_eur as old_price_eur, -- precio antiguo
-        ph_old.price_usd as old_price_usd,
-        ((c.last_price_eur - ph_old.price_eur) / NULLIF(ph_old.price_eur, 0) * 100) as change_percentage_eur
-      FROM cards c
-      INNER JOIN LATERAL (
-        SELECT price_eur, price_usd
-        FROM price_history
-        WHERE card_id = c.id 
-          AND created_at <= ${timeCondition} -- condición de tiempo
-        ORDER BY created_at DESC
-        LIMIT 1
-      ) ph_old ON true
-      WHERE c.last_price_eur IS NOT NULL 
-        AND ph_old.price_eur IS NOT NULL
-        AND ph_old.price_eur > 0
-    )
-    SELECT * FROM price_changes
-    WHERE change_percentage_eur > 0
-    ORDER BY change_percentage_eur DESC
-    LIMIT 20
-  `;
-    // LATERAL permite que las subconsulta use c.id
-
-    const res = await query(queryText);
-    return res.rows;
-};
-
-export const getTrendingPriceDecreaseService = async (period = "24h") => {
-    const timeCondition =
-        period === "7d"
-            ? "NOW() - INTERVAL '7 days'"
-            : "NOW() - INTERVAL '1 day'";
-
-    const queryText = `
-    WITH price_changes AS (
-      SELECT 
+      SELECT
         c.id,
         c.name,
         c.image_small,
@@ -148,12 +103,49 @@ export const getTrendingPriceDecreaseService = async (period = "24h") => {
       INNER JOIN LATERAL (
         SELECT price_eur, price_usd
         FROM price_history
-        WHERE card_id = c.id 
-          AND created_at <= ${timeCondition}
+        WHERE card_id = c.id
+          AND created_at <= NOW() - INTERVAL '1 day' * $1
         ORDER BY created_at DESC
         LIMIT 1
       ) ph_old ON true
-      WHERE c.last_price_eur IS NOT NULL 
+      WHERE c.last_price_eur IS NOT NULL
+        AND ph_old.price_eur IS NOT NULL
+        AND ph_old.price_eur > 0
+    )
+    SELECT * FROM price_changes
+    WHERE change_percentage_eur > 0
+    ORDER BY change_percentage_eur DESC
+    LIMIT 20
+  `;
+
+    const res = await query(queryText, [intervalDays]);
+    return res.rows;
+};
+
+export const getTrendingPriceDecreaseService = async (period = "24h") => {
+    const intervalDays = period === "7d" ? 7 : 1;
+
+    const queryText = `
+    WITH price_changes AS (
+      SELECT
+        c.id,
+        c.name,
+        c.image_small,
+        c.last_price_eur,
+        c.last_price_usd,
+        ph_old.price_eur as old_price_eur,
+        ph_old.price_usd as old_price_usd,
+        ((c.last_price_eur - ph_old.price_eur) / NULLIF(ph_old.price_eur, 0) * 100) as change_percentage_eur
+      FROM cards c
+      INNER JOIN LATERAL (
+        SELECT price_eur, price_usd
+        FROM price_history
+        WHERE card_id = c.id
+          AND created_at <= NOW() - INTERVAL '1 day' * $1
+        ORDER BY created_at DESC
+        LIMIT 1
+      ) ph_old ON true
+      WHERE c.last_price_eur IS NOT NULL
         AND ph_old.price_eur IS NOT NULL
         AND ph_old.price_eur > 0
     )
@@ -163,7 +155,7 @@ export const getTrendingPriceDecreaseService = async (period = "24h") => {
     LIMIT 20
   `;
 
-    const res = await query(queryText);
+    const res = await query(queryText, [intervalDays]);
     return res.rows;
 };
 
@@ -173,6 +165,9 @@ export const getMostExpensiveCardsService = async (
 ) => {
     const priceColumn =
         currency === "usd" ? "last_price_usd" : "last_price_eur";
+    if (!["last_price_eur", "last_price_usd"].includes(priceColumn)) {
+        throw new Error("Invalid priceColumn");
+    }
 
     const queryText = `
     SELECT
@@ -197,6 +192,9 @@ export const getMostExpensiveCardsService = async (
 export const getCheapestCardsService = async (limit = 20, currency = "eur") => {
     const priceColumn =
         currency === "usd" ? "last_price_usd" : "last_price_eur";
+    if (!["last_price_eur", "last_price_usd"].includes(priceColumn)) {
+        throw new Error("Invalid priceColumn");
+    }
 
     const queryText = `
     SELECT
@@ -416,8 +414,8 @@ export const filterCards = async (filters) => {
         conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
 
     const orderClause =
-        sortBy === "price_desc" ? "ORDER BY c.last_price_eur DESC NULLS LAST" :
-        sortBy === "price_asc"  ? "ORDER BY c.last_price_eur ASC NULLS LAST" :
+        sortBy === "price_desc" ? `ORDER BY c.${priceColumn} DESC NULLS LAST` :
+        sortBy === "price_asc"  ? `ORDER BY c.${priceColumn} ASC NULLS LAST` :
                                   "ORDER BY c.name ASC";
 
     const queryText = `

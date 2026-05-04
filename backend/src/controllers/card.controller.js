@@ -245,6 +245,12 @@ export const searchCards = async (req, res) => {
  */
 export const filterCardsController = async (req, res) => {
     try {
+        const { sortBy } = req.query;
+        const VALID_SORT_VALUES = ["name_asc", "price_desc", "price_asc"];
+        if (sortBy && !VALID_SORT_VALUES.includes(sortBy)) {
+            return res.status(400).json({ error: "sortBy inválido. Use: name_asc, price_desc, price_asc" });
+        }
+
         const filters = {
             name: req.query.name,
             setId: req.query.setId || req.query.set,
@@ -256,7 +262,7 @@ export const filterCardsController = async (req, res) => {
             maxPrice: req.query.maxPrice,
             currency: req.query.currency || "eur",
             hasPrice: req.query.hasPrice !== "false",
-            sortBy: req.query.sortBy,
+            sortBy,
             limit: parseInt(req.query.limit) || 50,
             offset: parseInt(req.query.offset) || 0,
         };
@@ -266,7 +272,6 @@ export const filterCardsController = async (req, res) => {
         res.json({
             success: true,
             count: total,
-            filters: filters,
             data: cards,
         });
     } catch (error) {
