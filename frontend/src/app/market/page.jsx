@@ -43,6 +43,16 @@ const RARITIES = [
     "Ultra Rara",
     "Secreta",
 ];
+
+const RARITY_API_MAP = {
+    "Común":       "Common",
+    "Infrecuente": "Uncommon",
+    "Rara":        "Rare",
+    "Rara Holo":   "Rare Holo",
+    "Ultra Rara":  "Ultra Rare",
+    "Secreta":     "Secret Rare",
+};
+
 const PAGE_SIZE = 20;
 
 export default function MarketPage() {
@@ -62,7 +72,7 @@ export default function MarketPage() {
         typeApiMap: TYPE_API_MAP,
         priceRange,
         selectedSet,
-        selectedRarity,
+        selectedRarity: RARITY_API_MAP[selectedRarity] || selectedRarity,
         page,
     });
 
