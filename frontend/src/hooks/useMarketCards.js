@@ -13,6 +13,7 @@ export function useMarketCards({
     priceRange,
     selectedSet,
     selectedRarity,
+    sortBy,
     page,
 }) {
     const [cards, setCards] = useState([]);
@@ -62,6 +63,7 @@ export function useMarketCards({
                         minPrice: priceRange.min || undefined,
                         maxPrice: priceRange.max || undefined,
                         hasPrice: showWithoutPrice ? false : undefined,
+                        sortBy: sortBy || undefined,
                         limit: PAGE_SIZE,
                         offset,
                     });
@@ -108,7 +110,7 @@ export function useMarketCards({
         return () => {
             cancelled = true;
         };
-    }, [debouncedSearch, selectedTypes, typeApiMap, priceRange, selectedSet, selectedRarity, page]);
+    }, [debouncedSearch, selectedTypes, typeApiMap, priceRange, selectedSet, selectedRarity, sortBy, page]);
 
     return { cards, totalCount, loading, error };
 }
