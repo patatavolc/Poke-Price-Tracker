@@ -7,6 +7,7 @@ import {
     ChevronLeft,
     TrendingUp,
     TrendingDown,
+    ExternalLink,
 } from "lucide-react";
 import {
     LineChart,
@@ -57,9 +58,9 @@ export default function CardDetailPage() {
                 day: "2-digit",
                 month: "short",
             });
-            byDate.set(label, parseFloat(h.price_eur) || 0);
+            byDate.set(h.created_at.slice(0, 10), { date: label, price: parseFloat(h.price_eur) || 0 });
         }
-        return Array.from(byDate.entries()).map(([date, price]) => ({ date, price }));
+        return Array.from(byDate.values());
     }, [card]);
 
     const trend24h = useMemo(() => calcTrend(card?.history, 24), [card]);
@@ -82,6 +83,7 @@ export default function CardDetailPage() {
     }
 
     const currentPrice = parseFloat(card.last_price_eur ?? card.last_price_usd ?? 0);
+    const isSafeUrl = (url) => /^https?:\/\//i.test(url);
 
     return (
         <div className="min-h-screen bg-card-bg text-gray-200 py-8 relative overflow-hidden">
@@ -179,6 +181,39 @@ export default function CardDetailPage() {
                                 <p className="text-gray-400 text-center py-8">No hay historial de precios disponible.</p>
                             )}
                         </div>
+
+                        {/* Buy Links */}
+                        {(isSafeUrl(card.cardmarket_url) || isSafeUrl(card.tcgplayer_url)) && (
+                            <div className="bg-[#001B3A] border border-ui-border p-6 rounded-xl shadow-md w-full">
+                                <h2 className="text-xl font-bold text-white mb-4 border-b border-ui-border pb-3">
+                                    Dónde Comprar
+                                </h2>
+                                <div className="flex flex-wrap gap-3">
+                                    {isSafeUrl(card.cardmarket_url) && (
+                                        <a
+                                            href={card.cardmarket_url}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="flex items-center gap-2 px-5 py-3 bg-brand-primary text-black font-bold rounded-lg hover:bg-brand-highlight transition-colors"
+                                        >
+                                            <ExternalLink className="w-4 h-4" />
+                                            Cardmarket
+                                        </a>
+                                    )}
+                                    {isSafeUrl(card.tcgplayer_url) && (
+                                        <a
+                                            href={card.tcgplayer_url}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="flex items-center gap-2 px-5 py-3 bg-[#003566] text-white font-bold rounded-lg hover:bg-[#004080] transition-colors border border-ui-border"
+                                        >
+                                            <ExternalLink className="w-4 h-4" />
+                                            TCGPlayer
+                                        </a>
+                                    )}
+                                </div>
+                            </div>
+                        )}
                     </main>
                 </div>
             </div>
