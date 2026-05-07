@@ -35,7 +35,8 @@ export function useMarketCards({
                     priceRange.min ||
                     priceRange.max ||
                     selectedSet ||
-                    selectedRarity;
+                    selectedRarity ||
+                    (sortBy && sortBy !== "name_asc");
 
                 if (hasFilters) {
                     // Búsqueda por ID directo

@@ -52,14 +52,6 @@ export default function Footer() {
                             </li>
                             <li>
                                 <Link
-                                    href="/cards"
-                                    className="text-gray-400 hover:text-brand-highlight transition-colors duration-200"
-                                >
-                                    Cartas
-                                </Link>
-                            </li>
-                            <li>
-                                <Link
                                     href="/pack-opener"
                                     className="text-gray-400 hover:text-brand-highlight transition-colors duration-200"
                                 >
@@ -68,10 +60,10 @@ export default function Footer() {
                             </li>
                             <li>
                                 <Link
-                                    href="/profile"
+                                    href="/coleccion"
                                     className="text-gray-400 hover:text-brand-highlight transition-colors duration-200"
                                 >
-                                    Mi Perfil
+                                    Colección
                                 </Link>
                             </li>
                         </ul>
