@@ -2,14 +2,10 @@
 import { useState } from "react";
 import { claimDaily } from "@/lib/api/packs";
 
-/**
- * Props:
- * - user: { daily_streak, last_daily_claim, coins }
- * - onClaimed: (newTotalCoins) => void
- */
 export default function DailyClaimBanner({ user, onClaimed }) {
   const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState(null);
+  const [claimed, setClaimed] = useState(false);
+  const [claimError, setClaimError] = useState(null);
 
   const canClaim = () => {
     if (!user?.last_daily_claim) return true;
@@ -18,46 +14,37 @@ export default function DailyClaimBanner({ user, onClaimed }) {
     return hours >= 24;
   };
 
-  const nextStreakCoins = Math.min(((user?.daily_streak || 0) + 1) * 100, 1000);
   const available = canClaim();
+
+  if (!available || claimed) return null;
+
+  const nextStreakCoins = Math.min(((user?.daily_streak || 0) + 1) * 100, 1000);
 
   const handleClaim = async () => {
     setLoading(true);
-    setMessage(null);
+    setClaimError(null);
     try {
       const result = await claimDaily();
-      setMessage(`+${result.coins_earned} 🪙 · Racha: ${result.new_streak} días`);
       onClaimed(result.total_coins);
+      setClaimed(true);
     } catch (err) {
-      setMessage(err.message);
+      setClaimError("No se pudo reclamar. Inténtalo de nuevo.");
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="flex items-center gap-3">
+    <div className="flex flex-col items-end gap-1">
       <button
         onClick={handleClaim}
-        disabled={!available || loading}
-        className={`px-4 py-2 rounded-lg font-semibold text-sm transition-colors ${
-          available
-            ? "bg-brand-highlight text-black hover:bg-brand-primary"
-            : "bg-ui-border text-gray-500 cursor-not-allowed"
-        }`}
-        title={
-          available
-            ? `Racha actual: ${user?.daily_streak || 0} días`
-            : "Vuelve mañana"
-        }
+        disabled={loading}
+        className="px-4 py-2 rounded-lg font-semibold text-sm transition-colors bg-brand-highlight text-black hover:bg-brand-primary disabled:opacity-50"
+        title={`Racha actual: ${user?.daily_streak || 0} días`}
       >
-        {loading
-          ? "..."
-          : available
-          ? `Reclamar +${nextStreakCoins} 🪙`
-          : "Vuelve mañana"}
+        {loading ? "..." : `Reclamar +${nextStreakCoins} 🪙`}
       </button>
-      {message && <span className="text-sm text-gray-300">{message}</span>}
+      {claimError && <p className="text-red-400 text-xs">{claimError}</p>}
     </div>
   );
 }
