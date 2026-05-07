@@ -51,13 +51,15 @@ export default function CardDetailPage() {
 
     const chartData = useMemo(() => {
         if (!card?.history) return [];
-        return card.history.map((h) => ({
-            date: new Date(h.created_at).toLocaleDateString("es-ES", {
+        const byDate = new Map();
+        for (const h of card.history) {
+            const label = new Date(h.created_at).toLocaleDateString("es-ES", {
                 day: "2-digit",
                 month: "short",
-            }),
-            price: parseFloat(h.price_eur) || 0,
-        }));
+            });
+            byDate.set(label, parseFloat(h.price_eur) || 0);
+        }
+        return Array.from(byDate.entries()).map(([date, price]) => ({ date, price }));
     }, [card]);
 
     const trend24h = useMemo(() => calcTrend(card?.history, 24), [card]);
