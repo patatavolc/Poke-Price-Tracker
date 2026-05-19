@@ -64,6 +64,7 @@ export default function MarketPage() {
     const [page, setPage] = useState(1);
     const [sortBy, setSortBy] = useState("name_asc");
     const [SETS, setSETS] = useState([]);
+    const [isFilterOpen, setIsFilterOpen] = useState(false);
 
     const debouncedSearch = useDebounce(searchTerm, 400);
 
@@ -121,6 +122,16 @@ export default function MarketPage() {
                     Mercado de Cartas
                 </h1>
                 <div className="flex flex-col lg:flex-row gap-8">
+                    {/* Mobile filter toggle button */}
+                    <button
+                        className="lg:hidden flex items-center gap-2 self-start px-4 py-2 bg-[#002855] border border-ui-border rounded-lg text-white text-sm font-medium hover:border-brand-primary transition-colors"
+                        onClick={() => setIsFilterOpen((o) => !o)}
+                    >
+                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2a1 1 0 01-.293.707L13 13.414V19a1 1 0 01-.553.894l-4 2A1 1 0 017 21v-7.586L3.293 6.707A1 1 0 013 6V4z" />
+                        </svg>
+                        {isFilterOpen ? "Ocultar filtros" : "Mostrar filtros"}
+                    </button>
                     <FilterSidebar
                         priceRange={priceRange}
                         setPriceRange={setPriceRange}
@@ -135,6 +146,7 @@ export default function MarketPage() {
                         setSelectedRarity={setSelectedRarity}
                         sortBy={sortBy}
                         setSortBy={setSortBy}
+                        isOpen={isFilterOpen}
                     />
                     <section className="flex-1">
                         <SearchBar

@@ -31,11 +31,12 @@ export default function FilterSidebar({
     setSelectedRarity,
     sortBy,
     setSortBy,
+    isOpen,
 }) {
     const [isTypesExpanded, setIsTypesExpanded] = useState(false);
 
     return (
-        <aside className="w-full lg:w-1/4 xl:w-1/5 space-y-6 bg-[#002855] p-6 rounded-xl border border-ui-border h-fit shadow-lg shadow-black/20">
+        <aside className={`w-full lg:w-1/4 xl:w-1/5 space-y-6 bg-[#002855] p-6 rounded-xl border border-ui-border h-fit shadow-lg shadow-black/20 ${isOpen ? "" : "hidden"} lg:block`}>
             <h2 className="text-xl font-semibold border-b border-ui-border pb-2 text-white">
                 Filtros
             </h2>

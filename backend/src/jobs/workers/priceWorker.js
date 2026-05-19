@@ -30,6 +30,6 @@ export const startPriceWorker = () => {
         console.error("❌ Worker error general:", err.message);
     });
 
-    console.log("🔄 Price worker iniciado, escuchando cola 'price-sync'...");
+    console.log("🔄 Price worker iniciado, escuchando cola 'pryce-sync'...");
     return worker;
 };
