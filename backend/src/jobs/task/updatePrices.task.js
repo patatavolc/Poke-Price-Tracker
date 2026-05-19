@@ -3,6 +3,7 @@
  */
 
 import { query } from "../../config/db.js";
+import { syncAggregatedPrice } from "../../services/price/sync.js";
 import { priceQueue } from "../queues/priceQueue.js";
 import TaskLogger from "../utils/taskLogger.js";
 
@@ -15,7 +16,7 @@ export async function updateHotPricesTask(batchSize = 50) {
     logger.start();
 
     try {
-        // Buscar cartas con mas de 10 actualizaciones en los ultimos 7 dias
+        // Buscar cartas con mas de 2 actualizaciones en los ultimos 7 dias
         const { rows: hotCards } = await query(
             `
       SELECT c.id, c.name, COUNT(*) as update_count
@@ -23,7 +24,7 @@ export async function updateHotPricesTask(batchSize = 50) {
       JOIN price_history ph ON c.id = ph.card_id
       WHERE ph.created_at > NOW() - INTERVAL '7 days'
       GROUP BY c.id, c.name
-      HAVING COUNT(*) > 10
+      HAVING COUNT(*) > 2
       ORDER BY update_count DESC
       LIMIT $1
       `,

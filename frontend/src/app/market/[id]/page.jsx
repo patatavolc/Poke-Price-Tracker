@@ -129,15 +129,15 @@ export default function CardDetailPage() {
                     {/* Right: Main Content */}
                     <main className="w-full lg:w-[70%] flex flex-col gap-10">
                         <div className="flex flex-col md:flex-row md:justify-between md:items-start gap-4 mb-2">
-                            <h1 className="text-5xl md:text-7xl font-bold text-white font-display leading-tight flex-1">
+                            <h1 className="text-3xl sm:text-5xl md:text-7xl font-bold text-white font-display leading-tight flex-1">
                                 {card.name}
                             </h1>
                             <div className="flex flex-col md:items-end pt-2">
-                                <div className="text-5xl md:text-6xl font-bold text-brand-primary flex items-center">
+                                <div className="text-3xl sm:text-5xl md:text-6xl font-bold text-brand-primary flex items-center">
                                     {currentPrice.toFixed(2)}
-                                    <span className="text-4xl md:text-5xl ml-1">€</span>
+                                    <span className="text-2xl sm:text-4xl md:text-5xl ml-1">€</span>
                                 </div>
-                                <div className="flex gap-3 mt-4">
+                                <div className="flex flex-wrap gap-3 mt-4">
                                     {trend24h !== null && (
                                         <div className={`flex items-center px-3 py-1.5 rounded-md text-sm font-bold ${Number(trend24h) >= 0 ? "bg-green-500/20 text-green-400" : "bg-red-500/20 text-red-400"}`}>
                                             {Number(trend24h) >= 0 ? <TrendingUp className="w-4 h-4 mr-1.5" /> : <TrendingDown className="w-4 h-4 mr-1.5" />}
@@ -160,7 +160,7 @@ export default function CardDetailPage() {
                                 Historial de Precios
                             </h2>
                             {chartData.length > 0 ? (
-                                <div className="h-[450px] w-full mt-4">
+                                <div className="h-[240px] sm:h-[340px] md:h-[450px] w-full mt-4">
                                     <ResponsiveContainer width="100%" height="100%">
                                         <LineChart
                                             data={chartData}
